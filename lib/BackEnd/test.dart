@@ -1,2 +1,1 @@
-//이건 featureA
-//aaaa
+//featureA
