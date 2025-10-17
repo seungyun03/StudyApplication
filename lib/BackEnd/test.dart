@@ -1,5 +1,3 @@
-<<<<<<< HEAD
 //featureA
-=======
 //featureB
->>>>>>> develop
+
