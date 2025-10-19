@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../Providers/TimetableProvider.dart' as tp;
+import 'EditingPageParents.dart';
 
 class FullTimeTable extends StatelessWidget {
   const FullTimeTable({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final timetable = context.watch<tp.TimetableProvider>().timetable;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: Column(
-          children: const [
-            _TopHeaderBar(),
-            Expanded(child: _MainContent()),
-            _BottomNavigationBar(),
+          children: [
+            const _TopHeaderBar(),
+            Expanded(
+              child: _MainContent(timetable: timetable),
+            ),
+            const _BottomNavigationBar(),
           ],
         ),
       ),
@@ -31,6 +38,7 @@ class _TopHeaderBar extends StatefulWidget {
 
 class _TopHeaderBarState extends State<_TopHeaderBar> {
   bool _isBackPressed = false;
+  bool _isEditPressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +85,46 @@ class _TopHeaderBarState extends State<_TopHeaderBar> {
               color: Color(0xFF1F2937),
             ),
           ),
+          const Spacer(),
+          GestureDetector(
+            onTapDown: (_) {
+              setState(() => _isEditPressed = true);
+              HapticFeedback.lightImpact();
+            },
+            onTapUp: (_) async {
+              setState(() => _isEditPressed = false);
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditingPageParents()),
+              );
+
+              if (result != null && result is Map<String, tp.SubjectInfo?>) {
+                context.read<tp.TimetableProvider>().setAll(result);
+              }
+            },
+            onTapCancel: () => setState(() => _isEditPressed = false),
+            child: AnimatedScale(
+              scale: _isEditPressed ? 0.9 : 1.0,
+              duration: const Duration(milliseconds: 130),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: const Text(
+                  "수정",
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF4B5563),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -85,7 +133,8 @@ class _TopHeaderBarState extends State<_TopHeaderBar> {
 
 // ==================== 메인 콘텐츠 ====================
 class _MainContent extends StatelessWidget {
-  const _MainContent();
+  final Map<String, tp.SubjectInfo?> timetable;
+  const _MainContent({required this.timetable});
 
   @override
   Widget build(BuildContext context) {
@@ -109,23 +158,17 @@ class _MainContent extends StatelessWidget {
               ),
             ],
           ),
-          child: const _WeeklyTimetableWidget(),
+          child: _WeeklyTimetableWidget(timetable: timetable),
         ),
       ),
     );
   }
 }
 
-// ==================== 주간 시간표 위젯 ====================
-class _WeeklyTimetableWidget extends StatefulWidget {
-  const _WeeklyTimetableWidget();
-
-  @override
-  State<_WeeklyTimetableWidget> createState() => _WeeklyTimetableWidgetState();
-}
-
-class _WeeklyTimetableWidgetState extends State<_WeeklyTimetableWidget> {
-  bool _editPressed = false;
+// ==================== 주간 시간표 ====================
+class _WeeklyTimetableWidget extends StatelessWidget {
+  final Map<String, tp.SubjectInfo?> timetable;
+  const _WeeklyTimetableWidget({required this.timetable});
 
   @override
   Widget build(BuildContext context) {
@@ -148,58 +191,16 @@ class _WeeklyTimetableWidgetState extends State<_WeeklyTimetableWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 헤더
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "2024년 1학기 시간표",
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              // 수정 버튼만 남김
-              GestureDetector(
-                onTapDown: (_) {
-                  setState(() => _editPressed = true);
-                  HapticFeedback.lightImpact();
-                },
-                onTapUp: (_) {
-                  setState(() => _editPressed = false);
-                  // TODO: 수정 기능 구현
-                },
-                onTapCancel: () => setState(() => _editPressed = false),
-                child: AnimatedScale(
-                  scale: _editPressed ? 0.9 : 1.0,
-                  duration: const Duration(milliseconds: 130),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: const Text(
-                      "수정",
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF4B5563),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          const Text(
+            "2024년 1학기 시간표",
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Color(0xFF1F2937),
+            ),
           ),
-
           const SizedBox(height: 20),
-
-          // 요일 헤더
           Row(
             children: [
               const SizedBox(width: 50),
@@ -217,10 +218,7 @@ class _WeeklyTimetableWidgetState extends State<_WeeklyTimetableWidget> {
                 ),
             ],
           ),
-
           const SizedBox(height: 10),
-
-          // 시간표 셀들
           for (final t in times)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -236,58 +234,53 @@ class _WeeklyTimetableWidgetState extends State<_WeeklyTimetableWidget> {
                       ),
                     ),
                   ),
-                  for (final d in days) const Expanded(child: _TimetableCell()),
+                  for (final d in days)
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: timetable["$d-$t"]?.bgColor ??
+                              const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Center(
+                          child: timetable["$d-$t"] == null
+                              ? const Text(
+                                  "+",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFF9CA3AF),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      timetable["$d-$t"]!.subject,
+                                      style: TextStyle(
+                                        color: timetable["$d-$t"]!.textColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      timetable["$d-$t"]!.room,
+                                      style: TextStyle(
+                                        color: timetable["$d-$t"]!.roomColor,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-// ==================== 시간표 셀 ====================
-class _TimetableCell extends StatefulWidget {
-  const _TimetableCell();
-
-  @override
-  State<_TimetableCell> createState() => _TimetableCellState();
-}
-
-class _TimetableCellState extends State<_TimetableCell> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() => _pressed = true);
-        HapticFeedback.lightImpact();
-      },
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        // TODO: 셀 클릭 동작
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 130),
-        transform: Matrix4.identity()..scale(_pressed ? 0.93 : 1.0),
-        height: 60,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: _pressed ? const Color(0xFFE0E7FF) : const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: _pressed
-              ? [
-                  BoxShadow(
-                    color: Colors.indigo.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : [],
-        ),
       ),
     );
   }

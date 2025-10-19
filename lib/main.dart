@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:study_app/FrontEnd/homepage.dart';
+import 'package:provider/provider.dart';
+import 'FrontEnd/HomePage.dart'; // ✅ 네 홈 화면
+import 'Providers/TimetableProvider.dart'; // ✅ Provider 추가
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TimetableProvider()), // ✅ 추가
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -10,10 +19,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Study App',
-      home: HomePage(), // ✅ 바로 여기서 시작
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+      ),
+      home: const HomePage(), // ✅ 홈 페이지 진입점
     );
   }
 }

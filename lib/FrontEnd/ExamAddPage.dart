@@ -108,8 +108,7 @@ class _ExamAddPageState extends State<ExamAddPage> {
           ...materials
               .asMap()
               .entries
-              .map((e) => _buildMaterialItem(e.key, e.value))
-              .toList(),
+              .map((e) => _buildMaterialItem(e.key, e.value)),
         ]),
       ),
     );

@@ -90,11 +90,7 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
             ],
           ),
           const SizedBox(height: 10),
-          ...files
-              .asMap()
-              .entries
-              .map((e) => _buildFileItem(e.key, e.value))
-              .toList(),
+          ...files.asMap().entries.map((e) => _buildFileItem(e.key, e.value)),
           const SizedBox(height: 20),
           Row(
             children: [
