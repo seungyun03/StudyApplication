@@ -298,9 +298,9 @@ class _BottomNavigationBar extends StatelessWidget {
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
       ),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: const [
+        children: [
           _NavItem(icon: Icons.forum_outlined, label: "커뮤니티", active: false),
           _NavItem(icon: Icons.home, label: "홈", active: true),
           _NavItem(icon: Icons.settings_outlined, label: "설정", active: false),
