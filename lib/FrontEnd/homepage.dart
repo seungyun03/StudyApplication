@@ -39,14 +39,14 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final timetable = context.watch<tp.TimetableProvider>().timetable;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+    return const Scaffold(
+      backgroundColor: Color(0xFFF9FAFB),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               _HeaderSection(),
               SizedBox(height: 20),
               _TopCardsRow(),
@@ -59,7 +59,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      bottomNavigationBar: const BottomNavigationBarWidget(),
+      bottomNavigationBar: BottomNavigationBarWidget(),
     );
   }
 }
@@ -70,12 +70,12 @@ class _HeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
               "시간표",
               style: TextStyle(
@@ -97,7 +97,7 @@ class _HeaderSection extends StatelessWidget {
             ),
           ],
         ),
-        const Icon(Icons.chevron_right, color: Colors.grey, size: 28),
+        Icon(Icons.chevron_right, color: Colors.grey, size: 28),
       ],
     );
   }
@@ -109,8 +109,8 @@ class _TopCardsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         Expanded(child: ExamScheduleWidget()),
         SizedBox(width: 16),
         Expanded(child: AssignmentScheduleWidget()),
@@ -125,8 +125,8 @@ class ExamScheduleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CardWrapper(
-      gradient: const [Color(0xFFFEE2E2), Color(0xFFFDF2F8)],
+    return const _CardWrapper(
+      gradient: [Color(0xFFFEE2E2), Color(0xFFFDF2F8)],
       title: "시험 일정",
       emptyText: "등록된 시험 일정이 없습니다",
     );
@@ -139,8 +139,8 @@ class AssignmentScheduleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CardWrapper(
-      gradient: const [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
+    return const _CardWrapper(
+      gradient: [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
       title: "과제 일정",
       emptyText: "등록된 과제 일정이 없습니다",
     );
@@ -254,7 +254,7 @@ class CurrentClassBanner extends StatelessWidget {
 
 // ==================== 주간 시간표 (Provider 적용) ====================
 class _WeeklyTimetableWrapper extends StatelessWidget {
-  const _WeeklyTimetableWrapper({super.key});
+  const _WeeklyTimetableWrapper();
 
   @override
   Widget build(BuildContext context) {
