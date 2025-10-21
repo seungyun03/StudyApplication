@@ -12,7 +12,12 @@ import 'AssignmentAddPage.dart';
 import 'ExamAddPage.dart';
 
 class TimeTableButton extends StatefulWidget {
-  const TimeTableButton({super.key});
+  final String subjectName; // ✅ 과목명 전달받기 추가
+
+  const TimeTableButton({
+    super.key,
+    required this.subjectName,
+  });
 
   @override
   State<TimeTableButton> createState() => _TimeTableButtonState();
@@ -59,10 +64,11 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 20),
-                  // 제목
-                  const Text(
-                    "수학 - A101",
-                    style: TextStyle(
+
+                  // ✅ 전달받은 과목명 출력
+                  Text(
+                    widget.subjectName,
+                    style: const TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1E2939),
@@ -203,7 +209,6 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       ),
       child: Column(
         children: [
-          // 섹션 헤더
           Container(
             height: 60,
             width: double.infinity,
@@ -217,12 +222,14 @@ class _TimeTableButtonState extends State<TimeTableButton> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
-                        color: Color(0xFF1E293B),
-                      )),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
                   Row(
                     children: [
                       TextButton(
@@ -243,13 +250,11 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                         child: const Text('추가'),
                       ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
           ),
-
-          // 섹션 내용
           if (expanded)
             Container(
               width: double.infinity,

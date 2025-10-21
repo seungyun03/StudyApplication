@@ -1,30 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:study_app/FrontEnd/EditingPageParents.dart';
 import 'package:study_app/FrontEnd/FullTimeTable.dart';
 import 'package:study_app/FrontEnd/TimeTablebutton.dart';
+import '../Providers/TimetableProvider.dart' as tp;
 
 // ==================== TimetableSlot 모델 ====================
 class TimetableSlot {
   final String day;
   final String time;
-  final String? subject;
-  final Color color;
+  final tp.SubjectInfo? subjectInfo;
 
   TimetableSlot({
     required this.day,
     required this.time,
-    this.subject,
-    this.color = const Color(0xFFF9FAFB),
+    this.subjectInfo,
   });
 }
 
 // ==================== 홈 페이지 ====================
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Future<void> _openEditingPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditingPageParents()),
+    );
+    if (mounted) setState(() {}); // 돌아오면 새로고침
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final timetable = context.watch<tp.TimetableProvider>().timetable;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
@@ -39,7 +53,7 @@ class HomePage extends StatelessWidget {
               SizedBox(height: 20),
               CurrentClassBanner(),
               SizedBox(height: 20),
-              WeeklyTimetableWidget(),
+              _WeeklyTimetableWrapper(),
               SizedBox(height: 80),
             ],
           ),
@@ -134,7 +148,7 @@ class AssignmentScheduleWidget extends StatelessWidget {
 }
 
 // ==================== 카드 공통 디자인 ====================
-class _CardWrapper extends StatefulWidget {
+class _CardWrapper extends StatelessWidget {
   final List<Color> gradient;
   final String title;
   final String emptyText;
@@ -144,13 +158,6 @@ class _CardWrapper extends StatefulWidget {
     required this.title,
     required this.emptyText,
   });
-
-  @override
-  State<_CardWrapper> createState() => _CardWrapperState();
-}
-
-class _CardWrapperState extends State<_CardWrapper> {
-  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +175,7 @@ class _CardWrapperState extends State<_CardWrapper> {
           Container(
             height: 53,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: widget.gradient),
+              gradient: LinearGradient(colors: gradient),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),
@@ -177,7 +184,7 @@ class _CardWrapperState extends State<_CardWrapper> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.title,
+                  title,
                   style: const TextStyle(
                     fontFamily: 'Roboto',
                     fontWeight: FontWeight.w800,
@@ -185,44 +192,13 @@ class _CardWrapperState extends State<_CardWrapper> {
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                GestureDetector(
-                  onTapDown: (_) {
-                    setState(() => _isPressed = true);
-                    HapticFeedback.lightImpact();
-                  },
-                  onTapUp: (_) {
-                    setState(() => _isPressed = false);
-
-                    // ✅ 구분 로직
-                    if (widget.title == "시험 일정") {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const ExamPage()),
-                      );
-                    } else if (widget.title == "과제 일정") {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const AssignmentPage()),
-                      );
-                    }
-                  },
-                  onTapCancel: () => setState(() => _isPressed = false),
-                  child: AnimatedScale(
-                    scale: _isPressed ? 0.9 : 1.0,
-                    duration: const Duration(milliseconds: 130),
-                    child: Text(
-                      "전체보기",
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                        color: _isPressed
-                            ? const Color(0xFFEA580C).withOpacity(0.5)
-                            : const Color(0xFFEA580C),
-                      ),
-                    ),
+                const Text(
+                  "전체보기",
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Color(0xFFEA580C),
                   ),
                 ),
               ],
@@ -231,7 +207,7 @@ class _CardWrapperState extends State<_CardWrapper> {
           Expanded(
             child: Center(
               child: Text(
-                widget.emptyText,
+                emptyText,
                 style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 14,
@@ -276,9 +252,22 @@ class CurrentClassBanner extends StatelessWidget {
   }
 }
 
+// ==================== 주간 시간표 (Provider 적용) ====================
+class _WeeklyTimetableWrapper extends StatelessWidget {
+  const _WeeklyTimetableWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final timetable = context.watch<tp.TimetableProvider>().timetable;
+    return WeeklyTimetableWidget(timetable: timetable);
+  }
+}
+
 // ==================== 주간 시간표 ====================
 class WeeklyTimetableWidget extends StatelessWidget {
-  const WeeklyTimetableWidget({super.key});
+  final Map<String, tp.SubjectInfo?> timetable;
+
+  const WeeklyTimetableWidget({super.key, required this.timetable});
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +287,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 헤더
+          // ✅ 헤더 복원 (전체보기 + 수정)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -315,15 +304,14 @@ class WeeklyTimetableWidget extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: () {
-                      print("전체 보기 클릭");
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const FullTimeTable()),
+                            builder: (_) => const FullTimeTable()),
                       );
                     },
                     child: const Text(
-                      "전체 보기",
+                      "전체보기",
                       style: TextStyle(
                         fontSize: 13.8,
                         color: Color(0xFF9CA3AF),
@@ -333,11 +321,10 @@ class WeeklyTimetableWidget extends StatelessWidget {
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () {
-                      print("수정 클릭");
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const EditingPageParents()),
+                            builder: (_) => const EditingPageParents()),
                       );
                     },
                     child: const Text(
@@ -374,7 +361,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // 시간표 표 구조
+          // 시간표 셀
           for (final t in times)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -391,77 +378,72 @@ class WeeklyTimetableWidget extends StatelessWidget {
                     ),
                   ),
                   for (final d in days)
-                    Expanded(
-                      child: _TimetableSlotButton(day: d, time: t),
+                    Builder(
+                      builder: (context) {
+                        final cellSubject = timetable["$d-$t"];
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              if (cellSubject == null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const EditingPageParents()),
+                                );
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TimeTableButton(
+                                      subjectName:
+                                          "${cellSubject.subject} - ${cellSubject.room}",
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: cellSubject?.bgColor ??
+                                    const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              alignment: Alignment.center,
+                              child: cellSubject == null
+                                  ? const SizedBox.shrink()
+                                  : Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          cellSubject.subject,
+                                          style: TextStyle(
+                                            color: cellSubject.textColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          cellSubject.room,
+                                          style: TextStyle(
+                                            color: cellSubject.roomColor,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                 ],
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-// ==================== 시간표 버튼 ====================
-class _TimetableSlotButton extends StatefulWidget {
-  final String day;
-  final String time;
-
-  const _TimetableSlotButton({required this.day, required this.time});
-
-  @override
-  State<_TimetableSlotButton> createState() => _TimetableSlotButtonState();
-}
-
-class _TimetableSlotButtonState extends State<_TimetableSlotButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        HapticFeedback.lightImpact();
-        setState(() => _pressed = true);
-      },
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        print("클릭 → ${widget.day} ${widget.time}");
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  const TimeTableButton()), //시간표 버튼 누르면 그 시간표에 맞는 페이지로 이동
-        );
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 130),
-        transform: Matrix4.identity()..scale(_pressed ? 0.9 : 1.0),
-        height: 50,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: _pressed ? const Color(0xFFE0E7FF) : const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: _pressed
-              ? [
-                  BoxShadow(
-                      color: Colors.indigo.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2))
-                ]
-              : [],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          "+",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: _pressed ? const Color(0xFF4338CA) : const Color(0xFF9CA3AF),
-          ),
-        ),
       ),
     );
   }
@@ -479,9 +461,9 @@ class BottomNavigationBarWidget extends StatelessWidget {
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: const [
+        children: [
           _NavItem(icon: Icons.forum_outlined, label: "커뮤니티", active: false),
           _NavItem(icon: Icons.home, label: "홈", active: true),
           _NavItem(icon: Icons.settings_outlined, label: "설정", active: false),
@@ -519,31 +501,6 @@ class _NavItem extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ==================== 예시 페이지 ====================
-class ExamPage extends StatelessWidget {
-  const ExamPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("시험 일정 전체보기")),
-      body: const Center(child: Text("시험 일정 페이지 내용")),
-    );
-  }
-}
-
-class AssignmentPage extends StatelessWidget {
-  const AssignmentPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("과제 일정 전체보기")),
-      body: const Center(child: Text("과제 일정 페이지 내용")),
     );
   }
 }

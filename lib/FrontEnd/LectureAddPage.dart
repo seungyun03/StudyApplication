@@ -84,11 +84,7 @@ class _LectureAddPageState extends State<LectureAddPage> {
             ],
           ),
           const SizedBox(height: 10),
-          ...files
-              .asMap()
-              .entries
-              .map((e) => _buildFileItem(e.key, e.value))
-              .toList(),
+          ...files.asMap().entries.map((e) => _buildFileItem(e.key, e.value)),
         ]),
       ),
     );
