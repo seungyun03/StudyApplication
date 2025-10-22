@@ -1,10 +1,9 @@
-// 📄 lecture_add_page.dart
-// =====================================================
-// 🧾 강의 추가 페이지 (강의 위젯의 '추가' 버튼 클릭 시 열림)
-// 디자인은 React 버전 동일, Flutter 맞게 포팅
+// 📄 LectureAddPage.dart (수정 완료: 파일 열기 로직 활성화)
 // =====================================================
 
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart'; // 💡 파일 열기 기능 활성화 (pubspec.yaml에 추가 필수)
 
 class LectureAddPage extends StatefulWidget {
   const LectureAddPage({super.key});
@@ -14,18 +13,67 @@ class LectureAddPage extends StatefulWidget {
 }
 
 class _LectureAddPageState extends State<LectureAddPage> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _memoController;
+
   String title = "";
   String memo = "";
   final List<Map<String, String>> files = [];
 
-  void _addFile() {
-    setState(() {
-      files.add({
-        "name": "새 강의자료 ${files.length + 1}.pdf",
-        "date":
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: title);
+    _memoController = TextEditingController(text: memo);
+
+    _titleController.addListener(_updateTitle);
+    _memoController.addListener(_updateMemo);
+  }
+
+  void _updateTitle() {
+    if (title != _titleController.text) {
+      setState(() => title = _titleController.text);
+    }
+  }
+
+  void _updateMemo() {
+    if (memo != _memoController.text) {
+      setState(() => memo = _memoController.text);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.removeListener(_updateTitle);
+    _memoController.removeListener(_updateMemo);
+    _titleController.dispose();
+    _memoController.dispose();
+    super.dispose();
+  }
+
+  void _addFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: true,
+    );
+
+    if (result != null) {
+      setState(() {
+        for (var platformFile in result.files) {
+          files.add({
+            "name": platformFile.name,
+            "path": platformFile.path ?? "",
+            "date":
             "${DateTime.now().year}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().day.toString().padLeft(2, '0')}"
+          });
+        }
       });
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("${result.files.length}개의 파일을 추가했습니다.")));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("파일 선택이 취소되었습니다.")));
+    }
   }
 
   void _deleteFile(int index) {
@@ -33,6 +81,19 @@ class _LectureAddPageState extends State<LectureAddPage> {
   }
 
   void _save() {
+    if (title.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("강의 제목을 입력하세요.")));
+      return;
+    }
+
+    final lectureData = {
+      'title': title,
+      'files': files,
+    };
+
+    Navigator.pop(context, lectureData);
+
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text("강의정보가 저장되었습니다!")));
   }
@@ -61,10 +122,9 @@ class _LectureAddPageState extends State<LectureAddPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _buildTextField("강의 제목", title, (v) => setState(() => title = v)),
+          _buildTextField("강의 제목", _titleController),
           const SizedBox(height: 20),
-          _buildTextField("메모", memo, (v) => setState(() => memo = v),
-              maxLines: 3),
+          _buildTextField("메모", _memoController, maxLines: 3),
           const SizedBox(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -90,16 +150,14 @@ class _LectureAddPageState extends State<LectureAddPage> {
     );
   }
 
-  Widget _buildTextField(
-      String label, String value, ValueChanged<String> onChanged,
+  Widget _buildTextField(String label, TextEditingController controller,
       {int maxLines = 1}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
       const SizedBox(height: 8),
       TextField(
-        onChanged: onChanged,
-        controller: TextEditingController(text: value),
+        controller: controller,
         maxLines: maxLines,
         decoration: InputDecoration(
           hintText: "$label을 입력하세요",
@@ -111,25 +169,52 @@ class _LectureAddPageState extends State<LectureAddPage> {
     ]);
   }
 
+  // 💡 파일 항목 위젯: 항목을 탭하면 _openFile을 호출하여 파일을 엽니다.
   Widget _buildFileItem(int index, Map<String, String> file) {
+    final filePath = file["path"];
+
+    void _openFile() async {
+      if (filePath == null || filePath.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("파일 경로를 찾을 수 없습니다.")));
+        return;
+      }
+
+      // ⚠️ 실제 파일 열기 기능 활성화 (open_filex 패키지 사용):
+      final result = await OpenFilex.open(filePath);
+      if (result.type != ResultType.done) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("파일 열기 실패: ${result.message}")));
+      }
+    }
+
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.indigo.shade50,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.indigo.shade100),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text("${file["name"]}\n업로드: ${file["date"]}",
-              style: const TextStyle(color: Colors.indigo, fontSize: 13)),
-          IconButton(
-            onPressed: () => _deleteFile(index),
-            icon: const Icon(Icons.delete_outline, color: Colors.grey),
-          )
-        ],
+      child: InkWell( // 탭 이벤트를 처리하기 위해 InkWell로 감쌉니다.
+        onTap: _openFile, // 💡 탭 시 파일 열기 함수 호출
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text("${file["name"]}\n업로드: ${file["date"]}",
+                    style: const TextStyle(color: Colors.indigo, fontSize: 13)),
+              ),
+              IconButton(
+                onPressed: () => _deleteFile(index),
+                icon: const Icon(Icons.delete_outline, color: Colors.grey),
+              )
+            ],
+          ),
+        ),
       ),
     );
   }
