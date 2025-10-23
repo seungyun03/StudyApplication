@@ -103,7 +103,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // -------------------------------------------------------------------
 
   // 강의 자료 추가 및 수정 처리
-  void _openLectureAddPage({int? index}) async {
+  void _openLectureAddPage({int? index}) async { // ✅ async 유지
     final Map<String, dynamic>? initialData =
     index != null ? lectures[index] : null;
 
@@ -120,13 +120,14 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           // 추가 (Add)
           lectures.add(newLectureData);
         }
-        _saveData(); // 💡 데이터 변경 후 저장
       });
+      // 💡 수정: setState 밖에서 await로 저장 호출
+      await _saveData();
     }
   }
 
   // 과제 추가 및 수정 처리
-  void _openAssignmentAddPage({int? index}) async {
+  void _openAssignmentAddPage({int? index}) async { // ✅ async 유지
     final Map<String, dynamic>? initialData =
     index != null ? assignments[index] : null;
 
@@ -138,10 +139,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     if (newAssignmentData != null &&
         newAssignmentData is Map<String, dynamic> &&
         newAssignmentData['title'] != null) {
-      setState(() {
-        // 💡 필수 추가: 과목명 추가
-        newAssignmentData['subjectName'] = widget.subjectName;
 
+      newAssignmentData['subjectName'] = widget.subjectName; // 과목명 추가
+
+      setState(() {
         if (index != null) {
           // 수정 (Edit)
           assignments[index] = newAssignmentData;
@@ -149,16 +150,20 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           // 추가 (Add)
           assignments.add(newAssignmentData);
         }
-        _saveData(); // 💡 데이터 변경 후 저장
-
-        // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
-        Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
       });
+
+      // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
+      await _saveData();
+
+      // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+      if (mounted) {
+        await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+      }
     }
   }
 
   // 시험 일정 추가 및 수정 처리
-  void _openExamAddPage({int? index}) async {
+  void _openExamAddPage({int? index}) async { // ✅ async 유지
     final Map<String, dynamic>? initialData =
     index != null ? exams[index] : null;
 
@@ -166,10 +171,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
         context, MaterialPageRoute(builder: (_) => ExamAddPage(initialData: initialData)));
 
     if (newExamData != null && newExamData is Map<String, dynamic>) { // 💡 newExamData가 Map인지 확인
-      setState(() {
-        // 💡 필수 추가: 과목명 추가
-        newExamData['subjectName'] = widget.subjectName;
 
+      newExamData['subjectName'] = widget.subjectName; // 과목명 추가
+
+      setState(() {
         if (index != null) {
           // 수정 (Edit)
           exams[index] = newExamData;
@@ -177,11 +182,15 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           // 추가 (Add)
           exams.add(newExamData);
         }
-        _saveData(); // 💡 데이터 변경 후 저장
-
-        // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
-        Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
       });
+
+      // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
+      await _saveData();
+
+      // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+      if (mounted) {
+        await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+      }
     }
   }
 
@@ -189,29 +198,40 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // 🗑️ 삭제 함수 (Delete Functions)
   // -------------------------------------------------------------------
 
-  void _deleteLecture(int index) {
+  void _deleteLecture(int index) async { // ✅ async 추가
     setState(() {
       lectures.removeAt(index);
-      _saveData(); // 💡 데이터 변경 후 저장
     });
+    // 💡 수정: setState 밖에서 await로 저장 호출
+    await _saveData();
   }
 
-  void _deleteAssignment(int index) {
+  void _deleteAssignment(int index) async { // ✅ async 추가
     setState(() {
       assignments.removeAt(index);
-      _saveData(); // 💡 데이터 변경 후 저장
-      // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
-      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
     });
+
+    // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
+    await _saveData();
+
+    // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+    if (mounted) {
+      await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+    }
   }
 
-  void _deleteExam(int index) {
+  void _deleteExam(int index) async { // ✅ async 추가
     setState(() {
       exams.removeAt(index);
-      _saveData(); // 💡 데이터 변경 후 저장
-      // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
-      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
     });
+
+    // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
+    await _saveData();
+
+    // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+    if (mounted) {
+      await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+    }
   }
 
 

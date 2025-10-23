@@ -1,4 +1,4 @@
-// 📄 homepage.dart (수정됨: ScheduleProvider 구독 및 카드 연동)
+// 📄 homepage.dart (수정됨: initState 정리 및 const 추가)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -32,11 +32,13 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // 💡 Provider 생성 시 자동 로드되지만, 혹시 모를 경우를 대비해 한 번 더 로드 요청
+    // ScheduleProvider 생성자에서 이미 loadAllSchedules()를 호출하므로,
+    // 여기서의 중복 호출은 제거합니다.
+    /*
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // ScheduleProvider가 아직 로드되지 않았을 경우를 대비
       Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
     });
+    */
   }
 
   Future<void> _openEditingPage() async {
@@ -68,28 +70,28 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const _HeaderSection(),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // 💡 수정: Provider에서 로드된 데이터를 _TopCardsRow에 전달
               _TopCardsRow(
                 exams: allExams,
                 assignments: allAssignments,
                 isLoading: isLoading,
               ),
-              SizedBox(height: 20),
-              CurrentClassBanner(),
-              SizedBox(height: 20),
-              _WeeklyTimetableWrapper(),
-              SizedBox(height: 80),
+              const SizedBox(height: 20),
+              const CurrentClassBanner(),
+              const SizedBox(height: 20),
+              const _WeeklyTimetableWrapper(),
+              const SizedBox(height: 80),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBarWidget(),
+      bottomNavigationBar: const BottomNavigationBarWidget(),
     );
   }
 }
@@ -140,7 +142,9 @@ class _TopCardsRow extends StatelessWidget {
   final List<Map<String, dynamic>> assignments;
   final bool isLoading;
 
+  // 💡 const 생성자로 변경
   const _TopCardsRow({
+    super.key,
     required this.exams,
     required this.assignments,
     required this.isLoading,
@@ -152,7 +156,7 @@ class _TopCardsRow extends StatelessWidget {
       children: [
         // 💡 데이터 전달
         Expanded(child: ExamScheduleWidget(exams: exams, isLoading: isLoading)),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
         // 💡 데이터 전달
         Expanded(child: AssignmentScheduleWidget(assignments: assignments, isLoading: isLoading)),
       ],
@@ -241,6 +245,7 @@ class _CardWrapper extends StatelessWidget {
   final bool isLoading;
 
   const _CardWrapper({
+    super.key,
     required this.gradient,
     required this.title,
     required this.emptyText,
@@ -328,19 +333,20 @@ class _CardWrapper extends StatelessWidget {
               const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
+            child: const Row( // const 추가
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Text 위젯에 const 추가
                 Text(
-                  title,
-                  style: const TextStyle(
+                  "시험일정",
+                  style: TextStyle(
                     fontFamily: 'Roboto',
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                const Text(
+                Text(
                   "전체보기",
                   style: TextStyle(
                     fontFamily: 'Roboto',
