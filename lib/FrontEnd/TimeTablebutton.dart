@@ -1,12 +1,15 @@
-// 📄 TimeTableButton.dart (수정 완료: 시험 장소 표시 및 List<Map> 타입 일치)
+// 📄 TimeTableButton.dart (수정 완료: 상태 영속성 로직 추가)
 // ===================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'LectureAddPage.dart';
-import 'AssignmentAddPage.dart'; // 💡 수정 페이지로 사용
+import 'AssignmentAddPage.dart';
 import 'ExamAddPage.dart';
+// 💡 추가: 상태 영속성을 위한 패키지
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // JSON 인코딩/디코딩
 
 class TimeTableButton extends StatefulWidget {
   final String subjectName;
@@ -21,19 +24,76 @@ class TimeTableButton extends StatefulWidget {
 }
 
 class _TimeTableButtonState extends State<TimeTableButton> {
+  // 💡 SharedPreferences Key 정의 (각 과목별로 저장하기 위해 subjectName 사용)
+  late final String _lectureKey = 'lectures_${widget.subjectName}';
+  late final String _assignmentKey = 'assignments_${widget.subjectName}';
+  late final String _examKey = 'exams_${widget.subjectName}';
+
   bool lectureExpanded = true;
   bool assignmentExpanded = true;
   bool examExpanded = true;
   String activeTab = 'home';
 
-  // 💡 강의 목록
-  final List<Map<String, dynamic>> lectures = [];
+  // 💡 List를 재할당 가능하도록 final 키워드 제거
+  List<Map<String, dynamic>> lectures = [];
+  List<Map<String, dynamic>> assignments = [];
+  List<Map<String, dynamic>> exams = [];
 
-  // 💡 과제 목록
-  final List<Map<String, dynamic>> assignments = [];
+  @override
+  void initState() {
+    super.initState();
+    _loadData(); // 💡 위젯 초기화 시 저장된 데이터 로드
+  }
 
-  // 💡 핵심 수정: 시험 목록 데이터 타입을 Map으로 변경 (Map<String, dynamic>이어야 'examLocation' 저장 가능)
-  final List<Map<String, dynamic>> exams = [];
+  // -------------------------------------------------------------------
+  // 💾 데이터 로드/저장 (Persistence Logic)
+  // -------------------------------------------------------------------
+
+  // 데이터 로드 함수: 저장된 JSON 문자열을 List<Map>으로 변환하여 로드
+  Future<void> _loadData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // 강의 자료 로드
+    final String? lecturesJson = prefs.getString(_lectureKey);
+    if (lecturesJson != null) {
+      final List<dynamic> decodedList = jsonDecode(lecturesJson);
+      lectures = decodedList.map((item) => item as Map<String, dynamic>).toList();
+    }
+
+    // 과제 목록 로드
+    final String? assignmentsJson = prefs.getString(_assignmentKey);
+    if (assignmentsJson != null) {
+      final List<dynamic> decodedList = jsonDecode(assignmentsJson);
+      assignments = decodedList.map((item) => item as Map<String, dynamic>).toList();
+    }
+
+    // 시험 목록 로드
+    final String? examsJson = prefs.getString(_examKey);
+    if (examsJson != null) {
+      final List<dynamic> decodedList = jsonDecode(examsJson);
+      exams = decodedList.map((item) => item as Map<String, dynamic>).toList();
+    }
+
+    // 로드된 데이터를 화면에 반영
+    setState(() {});
+  }
+
+  // 데이터 저장 함수: List<Map>을 JSON 문자열로 인코딩하여 저장
+  Future<void> _saveData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // 강의 자료 저장
+    final String lecturesJson = jsonEncode(lectures);
+    await prefs.setString(_lectureKey, lecturesJson);
+
+    // 과제 목록 저장
+    final String assignmentsJson = jsonEncode(assignments);
+    await prefs.setString(_assignmentKey, assignmentsJson);
+
+    // 시험 목록 저장
+    final String examsJson = jsonEncode(exams);
+    await prefs.setString(_examKey, examsJson);
+  }
 
   // -------------------------------------------------------------------
   // ➕ 추가/수정 함수 (Add/Edit Functions)
@@ -57,6 +117,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           // 추가 (Add)
           lectures.add(newLectureData);
         }
+        _saveData(); // 💡 데이터 변경 후 저장
       });
     }
   }
@@ -82,11 +143,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           // 추가 (Add)
           assignments.add(newAssignmentData);
         }
+        _saveData(); // 💡 데이터 변경 후 저장
       });
     }
   }
 
-  // 💡 수정: 시험 일정 추가 및 수정 처리 (Map 반환 처리)
+  // 시험 일정 추가 및 수정 처리
   void _openExamAddPage({int? index}) async {
     final Map<String, dynamic>? initialData =
     index != null ? exams[index] : null;
@@ -103,6 +165,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           // 추가 (Add)
           exams.add(newExamData);
         }
+        _saveData(); // 💡 데이터 변경 후 저장
       });
     }
   }
@@ -114,18 +177,21 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   void _deleteLecture(int index) {
     setState(() {
       lectures.removeAt(index);
+      _saveData(); // 💡 데이터 변경 후 저장
     });
   }
 
   void _deleteAssignment(int index) {
     setState(() {
       assignments.removeAt(index);
+      _saveData(); // 💡 데이터 변경 후 저장
     });
   }
 
   void _deleteExam(int index) {
     setState(() {
       exams.removeAt(index);
+      _saveData(); // 💡 데이터 변경 후 저장
     });
   }
 
