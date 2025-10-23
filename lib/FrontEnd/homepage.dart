@@ -404,6 +404,22 @@ class _CardWrapper extends StatelessWidget {
         : const Color(0xFF1F2937); // 날짜/시간은 일반 텍스트 색상
 
 
+    // 💡 수정 시작: 과목명 및 시험 장소 정보 추출 및 표시 방식 결정
+    final parts = subjectName.split(' - ');
+    final String courseName = parts.isNotEmpty ? parts[0] : '과목 정보 없음';
+
+    // 💡 수정: 'examLocation' 키에서 실제 시험 장소를 가져옵니다.
+    // 과제(isExam: false)일 경우 빈 문자열을 유지합니다.
+    final String examLocation = isExam ? (item['examLocation'] ?? '') : '';
+
+    // 시험(isExam: true)인 경우: '과목명 (시험 장소)' 형식으로 표시
+    // 과제(isExam: false)인 경우: 과목명만 표시
+    final String displaySubjectText = isExam
+        ? (examLocation.isNotEmpty ? '$courseName ($examLocation)' : courseName)
+        : courseName;
+    // 💡 수정 끝
+
+
     // 💡 항목 전체를 GestureDetector로 감싸서 onTap을 처리
     return GestureDetector(
       // 💡 탭 이벤트 처리: onItemTap 콜백 실행
@@ -437,7 +453,7 @@ class _CardWrapper extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    subjectName,
+                    displaySubjectText, // 수정된 텍스트 사용
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),
