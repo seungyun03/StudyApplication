@@ -1,4 +1,4 @@
-// 📄 TimeTableButton.dart (수정 완료: 상태 영속성 로직 추가)
+// 📄 TimeTableButton.dart (수정됨: Provider 연동 및 subjectName 추가)
 // ===================================================================
 
 import 'package:flutter/material.dart';
@@ -10,6 +10,9 @@ import 'ExamAddPage.dart';
 // 💡 추가: 상태 영속성을 위한 패키지
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // JSON 인코딩/디코딩
+// 💡 추가: Provider 임포트
+import 'package:provider/provider.dart';
+import '../Providers/TimetableProvider.dart' as tp; // ScheduleProvider가 이 파일 안에 정의되어 있습니다.
 
 class TimeTableButton extends StatefulWidget {
   final String subjectName;
@@ -136,6 +139,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
         newAssignmentData is Map<String, dynamic> &&
         newAssignmentData['title'] != null) {
       setState(() {
+        // 💡 필수 추가: 과목명 추가
+        newAssignmentData['subjectName'] = widget.subjectName;
+
         if (index != null) {
           // 수정 (Edit)
           assignments[index] = newAssignmentData;
@@ -144,6 +150,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           assignments.add(newAssignmentData);
         }
         _saveData(); // 💡 데이터 변경 후 저장
+
+        // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
+        Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
       });
     }
   }
@@ -158,6 +167,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     if (newExamData != null && newExamData is Map<String, dynamic>) { // 💡 newExamData가 Map인지 확인
       setState(() {
+        // 💡 필수 추가: 과목명 추가
+        newExamData['subjectName'] = widget.subjectName;
+
         if (index != null) {
           // 수정 (Edit)
           exams[index] = newExamData;
@@ -166,6 +178,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           exams.add(newExamData);
         }
         _saveData(); // 💡 데이터 변경 후 저장
+
+        // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
+        Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
       });
     }
   }
@@ -185,6 +200,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     setState(() {
       assignments.removeAt(index);
       _saveData(); // 💡 데이터 변경 후 저장
+      // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
+      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
     });
   }
 
@@ -192,6 +209,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     setState(() {
       exams.removeAt(index);
       _saveData(); // 💡 데이터 변경 후 저장
+      // 💡 Provider 알림 추가: 스케줄 Provider에게 데이터 재로드를 요청
+      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
     });
   }
 

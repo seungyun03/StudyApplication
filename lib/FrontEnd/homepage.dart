@@ -1,3 +1,5 @@
+// 📄 homepage.dart (수정됨: ScheduleProvider 구독 및 카드 연동)
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:study_app/FrontEnd/EditingPageParents.dart';
@@ -27,29 +29,57 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    // 💡 Provider 생성 시 자동 로드되지만, 혹시 모를 경우를 대비해 한 번 더 로드 요청
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ScheduleProvider가 아직 로드되지 않았을 경우를 대비
+      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+    });
+  }
+
   Future<void> _openEditingPage() async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const EditingPageParents()),
     );
-    if (mounted) setState(() {}); // 돌아오면 새로고침
+    if (mounted) {
+      setState(() {}); // 기존 새로고침
+      // 💡 추가: 편집 페이지에서 돌아오면 스케줄 데이터 새로고침
+      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final timetable = context.watch<tp.TimetableProvider>().timetable;
+    // 💡 Provider 구독
+    final scheduleProvider = context.watch<tp.ScheduleProvider>();
 
-    return const Scaffold(
-      backgroundColor: Color(0xFFF9FAFB),
+    // Provider에서 로드된 데이터 가져오기
+    final allExams = scheduleProvider.allExams;
+    final allAssignments = scheduleProvider.allAssignments;
+    final isLoading = scheduleProvider.isLoading;
+
+    // 기존 timetable 구독은 WeeklyTimetableWrapper에서 사용됨
+    // final timetable = context.watch<tp.TimetableProvider>().timetable;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _HeaderSection(),
+              const _HeaderSection(),
               SizedBox(height: 20),
-              _TopCardsRow(),
+              // 💡 수정: Provider에서 로드된 데이터를 _TopCardsRow에 전달
+              _TopCardsRow(
+                exams: allExams,
+                assignments: allAssignments,
+                isLoading: isLoading,
+              ),
               SizedBox(height: 20),
               CurrentClassBanner(),
               SizedBox(height: 20),
@@ -103,61 +133,178 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-// ==================== 시험 + 과제 일정 ====================
+// ==================== 시험 + 과제 일정 (데이터 전달 받도록 수정) ====================
 class _TopCardsRow extends StatelessWidget {
-  const _TopCardsRow();
+  // 💡 추가: 시험/과제 데이터 및 로딩 상태
+  final List<Map<String, dynamic>> exams;
+  final List<Map<String, dynamic>> assignments;
+  final bool isLoading;
+
+  const _TopCardsRow({
+    required this.exams,
+    required this.assignments,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Expanded(child: ExamScheduleWidget()),
+        // 💡 데이터 전달
+        Expanded(child: ExamScheduleWidget(exams: exams, isLoading: isLoading)),
         SizedBox(width: 16),
-        Expanded(child: AssignmentScheduleWidget()),
+        // 💡 데이터 전달
+        Expanded(child: AssignmentScheduleWidget(assignments: assignments, isLoading: isLoading)),
       ],
     );
   }
 }
 
-// ==================== 시험 일정 카드 ====================
+// ==================== 시험 일정 카드 (데이터 처리 로직 추가) ====================
 class ExamScheduleWidget extends StatelessWidget {
-  const ExamScheduleWidget({super.key});
+  // 💡 데이터 필드 추가
+  final List<Map<String, dynamic>> exams;
+  final bool isLoading;
+
+  const ExamScheduleWidget({super.key, required this.exams, required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
-    return const _CardWrapper(
-      gradient: [Color(0xFFFEE2E2), Color(0xFFFDF2F8)],
+    // 💡 현재 날짜 이후의 시험만 필터링하고 정렬된 리스트에서 최신 3개 항목만 가져오기
+    final now = DateTime.now();
+    final upcomingExams = exams
+        .where((exam) {
+      final examDateStr = exam['examDate'] as String?;
+      if (examDateStr == null || examDateStr.isEmpty) return false;
+      final examDate = DateTime.tryParse(examDateStr);
+      // 오늘 날짜 포함 및 미래 시험만 표시
+      return examDate != null && examDate.isAfter(now.subtract(const Duration(days: 1)));
+    })
+        .take(3)
+        .toList();
+
+    return _CardWrapper(
+      gradient: const [Color(0xFFFEE2E2), Color(0xFFFDF2F8)],
       title: "시험 일정",
       emptyText: "등록된 시험 일정이 없습니다",
+      items: upcomingExams, // 필터링된 데이터 전달
+      isLoading: isLoading,
     );
   }
 }
 
-// ==================== 과제 일정 카드 ====================
+// ==================== 과제 일정 카드 (데이터 처리 로직 추가) ====================
 class AssignmentScheduleWidget extends StatelessWidget {
-  const AssignmentScheduleWidget({super.key});
+  // 💡 데이터 필드 추가
+  final List<Map<String, dynamic>> assignments;
+  final bool isLoading;
+
+  const AssignmentScheduleWidget({super.key, required this.assignments, required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
-    return const _CardWrapper(
-      gradient: [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
+    // 💡 미제출(submitted: false) 항목 중 현재 날짜 이후의 과제만 필터링하고 최신 3개만 가져오기
+    final now = DateTime.now();
+    final pendingAssignments = assignments
+        .where((a) {
+      final isSubmitted = (a['submitted'] ?? false) == true;
+      if (isSubmitted) return false;
+
+      final dueDateStr = a['dueDate'] as String?;
+      if (dueDateStr == null || dueDateStr.isEmpty) return false;
+
+      final dueDate = DateTime.tryParse(dueDateStr);
+      // 오늘 날짜 포함 및 미래 마감 과제만 표시
+      return dueDate != null && dueDate.isAfter(now.subtract(const Duration(days: 1)));
+    })
+        .take(3)
+        .toList();
+
+    return _CardWrapper(
+      gradient: const [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
       title: "과제 일정",
-      emptyText: "등록된 과제 일정이 없습니다",
+      emptyText: "남은 미제출 과제가 없습니다",
+      items: pendingAssignments, // 필터링된 데이터 전달
+      isLoading: isLoading,
     );
   }
 }
 
-// ==================== 카드 공통 디자인 ====================
+
+// ==================== 카드 공통 디자인 (데이터 표시 로직 추가) ====================
 class _CardWrapper extends StatelessWidget {
   final List<Color> gradient;
   final String title;
   final String emptyText;
+  // 💡 추가: 항목 목록 및 로딩 상태
+  final List<Map<String, dynamic>> items;
+  final bool isLoading;
 
   const _CardWrapper({
     required this.gradient,
     required this.title,
     required this.emptyText,
+    this.items = const [],
+    this.isLoading = true,
   });
+
+
+  // 💡 항목을 표시하는 내부 헬퍼 위젯
+  Widget _buildItemRow(Map<String, dynamic> item, bool isExam) {
+    // TimeTableButton.dart에서 subjectName이 저장되었다고 가정
+    final String subjectName = item['subjectName'] ?? '과목 정보 없음';
+    final String titleText = isExam ? (item['examName'] ?? '제목 없음') : (item['title'] ?? '제목 없음');
+    // 'YYYY-MM-DD' 형식의 날짜 문자열
+    final String dateText = isExam
+        ? (item['examDate'] ?? '')
+        : (item['dueDate'] ?? '');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(isExam ? Icons.event_note : Icons.assignment,
+              color: isExam ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+              size: 16
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  titleText,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Color(0xFF1F2937),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  subjectName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            dateText,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,12 +319,13 @@ class _CardWrapper extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // ... (상단 헤더 유지)
           Container(
             height: 53,
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: gradient),
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -204,8 +352,12 @@ class _CardWrapper extends StatelessWidget {
               ],
             ),
           ),
+          // 💡 수정: 내용 영역 (로딩/항목 없음/항목 리스트 표시)
           Expanded(
-            child: Center(
+            child: isLoading
+                ? Center(child: CircularProgressIndicator(color: gradient.first)) // 로딩 중 표시
+                : items.isEmpty
+                ? Center( // 항목이 없을 경우 빈 텍스트 표시
               child: Text(
                 emptyText,
                 style: TextStyle(
@@ -213,6 +365,13 @@ class _CardWrapper extends StatelessWidget {
                   fontSize: 14,
                   color: Colors.grey.shade400,
                 ),
+              ),
+            )
+                : Padding( // 항목이 있을 경우 리스트 표시
+              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: items.map((item) => _buildItemRow(item, title == "시험 일정")).toList(),
               ),
             ),
           ),
@@ -389,7 +548,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) =>
-                                          const EditingPageParents()),
+                                      const EditingPageParents()),
                                 );
                               } else {
                                 Navigator.push(
@@ -397,7 +556,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                   MaterialPageRoute(
                                     builder: (_) => TimeTableButton(
                                       subjectName:
-                                          "${cellSubject.subject} - ${cellSubject.room}",
+                                      "${cellSubject.subject} - ${cellSubject.room}",
                                     ),
                                   ),
                                 );
@@ -416,25 +575,25 @@ class WeeklyTimetableWidget extends StatelessWidget {
                               child: cellSubject == null
                                   ? const SizedBox.shrink()
                                   : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          cellSubject.subject,
-                                          style: TextStyle(
-                                            color: cellSubject.textColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          cellSubject.room,
-                                          style: TextStyle(
-                                            color: cellSubject.roomColor,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
+                                mainAxisAlignment:
+                                MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    cellSubject.subject,
+                                    style: TextStyle(
+                                      color: cellSubject.textColor,
+                                      fontWeight: FontWeight.bold,
                                     ),
+                                  ),
+                                  Text(
+                                    cellSubject.room,
+                                    style: TextStyle(
+                                      color: cellSubject.roomColor,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );

@@ -1,16 +1,24 @@
+// 📄 main.dart (수정됨: 중복 임포트 해결 및 ScheduleProvider 등록)
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // 💡 오류 해결을 위해 추가: 지역화(Localization) 패키지 임포트
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'FrontEnd/HomePage.dart'; // ✅ 네 홈 화면
-import 'Providers/TimetableProvider.dart'; // ✅ Provider 추가
+// 💡 수정: 파일 시스템의 대소문자를 고려하여 정확한 경로 하나만 임포트합니다.
+import 'Providers/TimetableProvider.dart';
 
 void main() {
+  // 💡 추가: SharedPreferences 사용 전 초기화 (TimeTableButton.dart 때문)
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TimetableProvider()), // ✅ 추가
+        ChangeNotifierProvider(create: (_) => TimetableProvider()),
+        // 💡 ScheduleProvider 등록 (TimetableProvider.dart 파일에 정의되어 있음)
+        ChangeNotifierProvider(create: (_) => ScheduleProvider()),
       ],
       child: const MyApp(),
     ),
