@@ -154,10 +154,10 @@ class _TopCardsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // 💡 데이터 전달
+        // 💡 데이터 전달 (왼쪽: 시험 일정)
         Expanded(child: ExamScheduleWidget(exams: exams, isLoading: isLoading)),
         const SizedBox(width: 16),
-        // 💡 데이터 전달
+        // 💡 데이터 전달 (오른쪽: 과제 일정으로 변경)
         Expanded(child: AssignmentScheduleWidget(assignments: assignments, isLoading: isLoading)),
       ],
     );
@@ -189,7 +189,7 @@ class ExamScheduleWidget extends StatelessWidget {
 
     return _CardWrapper(
       gradient: const [Color(0xFFFEE2E2), Color(0xFFFDF2F8)],
-      title: "시험 일정",
+      title: "시험 일정", // 💡 제목
       emptyText: "등록된 시험 일정이 없습니다",
       items: upcomingExams, // 필터링된 데이터 전달
       isLoading: isLoading,
@@ -226,7 +226,7 @@ class AssignmentScheduleWidget extends StatelessWidget {
 
     return _CardWrapper(
       gradient: const [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
-      title: "과제 일정",
+      title: "과제 일정", // 💡 제목
       emptyText: "남은 미제출 과제가 없습니다",
       items: pendingAssignments, // 필터링된 데이터 전달
       isLoading: isLoading,
@@ -238,7 +238,7 @@ class AssignmentScheduleWidget extends StatelessWidget {
 // ==================== 카드 공통 디자인 (데이터 표시 로직 추가) ====================
 class _CardWrapper extends StatelessWidget {
   final List<Color> gradient;
-  final String title;
+  final String title; // 💡 제목 필드
   final String emptyText;
   // 💡 추가: 항목 목록 및 로딩 상태
   final List<Map<String, dynamic>> items;
@@ -333,20 +333,20 @@ class _CardWrapper extends StatelessWidget {
               const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: const Row( // const 추가
+            child: Row( // 💡 const 제거하고 title 사용
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Text 위젯에 const 추가
+                // 💡 title을 사용하여 동적으로 텍스트 표시
                 Text(
-                  "시험일정",
-                  style: TextStyle(
+                  title,
+                  style: const TextStyle(
                     fontFamily: 'Roboto',
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                Text(
+                const Text( // const 유지
                   "전체보기",
                   style: TextStyle(
                     fontFamily: 'Roboto',
