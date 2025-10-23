@@ -1,11 +1,11 @@
-// 📄 TimeTableButton.dart (수정 완료: 과제 파일 처리 로직 추가)
+// 📄 TimeTableButton.dart (수정 완료: 시험 장소 표시 및 List<Map> 타입 일치)
 // ===================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:open_filex/open_filex.dart'; // 💡 파일 열기 기능 활성화
+import 'package:open_filex/open_filex.dart';
 import 'LectureAddPage.dart';
-import 'AssignmentAddPage.dart';
+import 'AssignmentAddPage.dart'; // 💡 수정 페이지로 사용
 import 'ExamAddPage.dart';
 
 class TimeTableButton extends StatefulWidget {
@@ -26,66 +26,109 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   bool examExpanded = true;
   String activeTab = 'home';
 
-  // 💡 강의 목록: Map 리스트 (파일 포함)
-  final List<Map<String, dynamic>> lectures = [
-    {'title': "1주차 강의노트", 'files': []},
-    {
-      'title': "함수의 극한과 연속성",
-      'files': [
-        {'name': "함수.pdf", 'path': "dummy_file_path_1", 'date': "2024.10.22"},
-      ]
-    },
-  ];
+  // 💡 강의 목록
+  final List<Map<String, dynamic>> lectures = [];
 
-  // 💡 수정: 과제 목록을 Map 리스트로 변경하여 파일 정보를 저장
-  final List<Map<String, dynamic>> assignments = [
-    {'title': "1주차 컴퓨터 구조", 'files': []},
-    {
-      'title': "연습문제 3-1 ~ 3-5",
-      'files': [
-        {'name': "과제_지문.hwp", 'path': "dummy_file_path_2", 'date': "2024.11.01"},
-      ]
-    },
-  ];
-  final List<String> exams = ["중간고사", "단원별 퀴즈"];
+  // 💡 과제 목록
+  final List<Map<String, dynamic>> assignments = [];
 
+  // 💡 핵심 수정: 시험 목록 데이터 타입을 Map으로 변경 (Map<String, dynamic>이어야 'examLocation' 저장 가능)
+  final List<Map<String, dynamic>> exams = [];
 
-  void _openLectureAddPage() async {
+  // -------------------------------------------------------------------
+  // ➕ 추가/수정 함수 (Add/Edit Functions)
+  // -------------------------------------------------------------------
+
+  // 강의 자료 추가 및 수정 처리
+  void _openLectureAddPage({int? index}) async {
+    final Map<String, dynamic>? initialData =
+    index != null ? lectures[index] : null;
+
     final newLectureData = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const LectureAddPage()));
+        MaterialPageRoute(builder: (_) => LectureAddPage(initialData: initialData)));
 
-    // Map 데이터인지 확인 후 리스트에 추가
     if (newLectureData != null && newLectureData is Map<String, dynamic> && newLectureData['title'] != null) {
       setState(() {
-        lectures.add(newLectureData);
+        if (index != null) {
+          // 수정 (Edit)
+          lectures[index] = newLectureData;
+        } else {
+          // 추가 (Add)
+          lectures.add(newLectureData);
+        }
       });
     }
   }
 
-  // 💡 수정: AssignmentAddPage에서 Map 데이터를 받도록 변경
-  void _openAssignmentAddPage() async {
+  // 과제 추가 및 수정 처리
+  void _openAssignmentAddPage({int? index}) async {
+    final Map<String, dynamic>? initialData =
+    index != null ? assignments[index] : null;
+
     final newAssignmentData = await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const AssignmentAddPage()));
+        context,
+        MaterialPageRoute(
+            builder: (_) => AssignmentAddPage(initialData: initialData)));
 
-    // Map 데이터인지 확인 후 리스트에 추가
-    if (newAssignmentData != null && newAssignmentData is Map<String, dynamic> && newAssignmentData['title'] != null) {
+    if (newAssignmentData != null &&
+        newAssignmentData is Map<String, dynamic> &&
+        newAssignmentData['title'] != null) {
       setState(() {
-        assignments.add(newAssignmentData);
+        if (index != null) {
+          // 수정 (Edit)
+          assignments[index] = newAssignmentData;
+        } else {
+          // 추가 (Add)
+          assignments.add(newAssignmentData);
+        }
       });
     }
   }
 
-  void _openExamAddPage() async {
-    final newExamName = await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const ExamAddPage()));
+  // 💡 수정: 시험 일정 추가 및 수정 처리 (Map 반환 처리)
+  void _openExamAddPage({int? index}) async {
+    final Map<String, dynamic>? initialData =
+    index != null ? exams[index] : null;
 
-    if (newExamName != null && newExamName is String) {
+    final newExamData = await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => ExamAddPage(initialData: initialData)));
+
+    if (newExamData != null && newExamData is Map<String, dynamic>) { // 💡 newExamData가 Map인지 확인
       setState(() {
-        exams.add(newExamName);
+        if (index != null) {
+          // 수정 (Edit)
+          exams[index] = newExamData;
+        } else {
+          // 추가 (Add)
+          exams.add(newExamData);
+        }
       });
     }
   }
+
+  // -------------------------------------------------------------------
+  // 🗑️ 삭제 함수 (Delete Functions)
+  // -------------------------------------------------------------------
+
+  void _deleteLecture(int index) {
+    setState(() {
+      lectures.removeAt(index);
+    });
+  }
+
+  void _deleteAssignment(int index) {
+    setState(() {
+      assignments.removeAt(index);
+    });
+  }
+
+  void _deleteExam(int index) {
+    setState(() {
+      exams.removeAt(index);
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -125,14 +168,20 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     expanded: lectureExpanded,
                     onToggle: () =>
                         setState(() => lectureExpanded = !lectureExpanded),
-                    onAdd: _openLectureAddPage,
+                    onAdd: () => _openLectureAddPage(), // 💡 추가 기능 (index: null)
                     gradient: const LinearGradient(
                       colors: [Color(0xFFEEF2FF), Color(0xFFEEF6FF)],
                     ),
                     accent: const Color(0xFF155DFC),
-                    children: lectures
-                        .map((data) => _buildItemWithFile(data, Colors.blue))
-                        .toList(),
+                    children: List.generate(lectures.length, (index) {
+                      return _buildItemWithFile(
+                        lectures[index],
+                        Colors.blue,
+                        onDelete: () => _deleteLecture(index),
+                        // 💡 항목 전체 탭 시 수정 페이지로 이동
+                        onTap: () => _openLectureAddPage(index: index),
+                      );
+                    }),
                   ),
                   const SizedBox(height: 24),
 
@@ -142,15 +191,20 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     expanded: assignmentExpanded,
                     onToggle: () => setState(
                             () => assignmentExpanded = !assignmentExpanded),
-                    onAdd: _openAssignmentAddPage, // 💡 Map을 받도록 변경된 함수
+                    onAdd: () => _openAssignmentAddPage(), // 💡 과제 추가 (index: null)
                     gradient: const LinearGradient(
                       colors: [Color(0xFFEFFEF6), Color(0xFFECFDF5)],
                     ),
                     accent: const Color(0xFF00A63E),
-                    // 💡 수정: 과제 리스트 항목을 파일 처리 가능한 위젯으로 빌드
-                    children: assignments
-                        .map((data) => _buildItemWithFile(data, Colors.green))
-                        .toList(),
+                    children: List.generate(assignments.length, (index) {
+                      return _buildItemWithFile(
+                        assignments[index],
+                        Colors.green,
+                        onDelete: () => _deleteAssignment(index),
+                        // 항목 전체 탭 시 수정 페이지로 이동
+                        onTap: () => _openAssignmentAddPage(index: index),
+                      );
+                    }),
                   ),
                   const SizedBox(height: 24),
 
@@ -160,13 +214,21 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     expanded: examExpanded,
                     onToggle: () =>
                         setState(() => examExpanded = !examExpanded),
-                    onAdd: _openExamAddPage,
+                    onAdd: () => _openExamAddPage(), // 💡 수정: 인덱스 없이 추가 호출
                     gradient: const LinearGradient(
                       colors: [Color(0xFFFAF5FF), Color(0xFFF5F3FF)],
                     ),
                     accent: const Color(0xFF9810FA),
-                    children:
-                    exams.map((e) => _buildSimpleItem(e, Colors.purple)).toList(),
+                    children: List.generate(exams.length, (index) {
+                      // 💡 Map 데이터를 넘겨줌
+                      return _buildExamItem(
+                        exams[index],
+                        Colors.purple,
+                        onDelete: () => _deleteExam(index),
+                        // 💡 항목 전체 탭 시 수정 페이지로 이동
+                        onTap: () => _openExamAddPage(index: index),
+                      );
+                    }),
                   ),
                   const SizedBox(height: 120),
                 ],
@@ -220,7 +282,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     );
   }
 
-  // ... (_buildSection은 동일)
+  // -------------------------------------------------------------------
+  // 🏗️ 빌드 섹션 (Build Sections) - 동일
+  // -------------------------------------------------------------------
+
   Widget _buildSection({
     required String title,
     required bool expanded,
@@ -230,7 +295,6 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     required Color accent,
     required List<Widget> children,
   }) {
-    // ... (_buildSection 코드 유지)
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
@@ -314,10 +378,23 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     );
   }
 
+  // -------------------------------------------------------------------
+  // 📄 파일 첨부 항목 빌드 (강의/과제용) - 동일
+  // -------------------------------------------------------------------
 
   // 💡 강의/과제 리스트 아이템 카드 (파일 처리 로직 포함)
-  Widget _buildItemWithFile(Map<String, dynamic> data, MaterialColor color) {
+  Widget _buildItemWithFile(
+      Map<String, dynamic> data,
+      MaterialColor color,
+      {required VoidCallback onDelete, VoidCallback? onTap} // 💡 onTap 콜백 유지
+      ) {
     final String title = data['title'] ?? '제목 없음';
+
+    // 💡 'submitted' 키가 있을 경우에만 과제로 간주하여 상태를 추출합니다.
+    final bool isAssignment = data.containsKey('submitted');
+    final bool submitted = isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
+    final String dueDate = isAssignment ? (data['dueDate'] ?? '') : ''; // 과제일 때만 기한 추출
+
     // List<Map<String, String>>으로 타입 캐스팅
     final List<Map<String, String>> files = (data['files'] as List?)
         ?.map((item) => Map<String, String>.from(item))
@@ -344,8 +421,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: InkWell(
         borderRadius: BorderRadius.circular(25),
-        // 항목 전체 탭 시 동작
-        onTap: () {
+        // 항목 전체 탭 시 동작 (수정 페이지 이동)
+        onTap: onTap ?? () {
           HapticFeedback.selectionClick();
           ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("$title 항목을 선택했습니다. (상세 페이지 이동 가정)")));
@@ -360,28 +437,87 @@ class _TimeTableButtonState extends State<TimeTableButton> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: color.shade700,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 15,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  // 💡 Column으로 감싸서 제목, 상태, 제출일을 세로로 표시
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: color.shade700,
+                          fontWeight: FontWeight.w700, // 제목을 좀 더 굵게
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      // 💡 과제(isAssignment)일 때만 상태 및 기한 표시
+                      if (isAssignment) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            // 💡 제출 상태 태그
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: submitted ? Colors.green.shade400 : Colors.red.shade400,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                submitted ? '제출 완료' : '미제출',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            // 💡 제출 기한 표시
+                            if (dueDate.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Text(
+                                  '기한: $dueDate',
+                                  style: TextStyle(
+                                    color: color.shade600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (hasFiles) // 파일이 있을 경우 아이콘 표시
-                  InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: _showFilesModal, // 💡 클립 버튼 탭 시 모달 표시
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 2.0, bottom: 2.0),
-                      child: Icon(Icons.attachment, color: color.shade500, size: 20),
+                // ---------------------------------------------------
+                // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
+                // ---------------------------------------------------
+                Row(
+                  children: [
+                    if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
+                      InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: _showFilesModal,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                          child: Icon(Icons.attachment, color: color.shade500, size: 20),
+                        ),
+                      ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: onDelete, // 💡 삭제 버튼
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                        child: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
+                      ),
                     ),
-                  ),
-                Icon(Icons.chevron_right, color: color.shade700),
+                    Icon(Icons.chevron_right, color: color.shade700), // 꺾쇠 아이콘
+                  ],
+                ),
               ],
             ),
           ),
@@ -391,13 +527,63 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   }
 
 
-  // 📦 단순 문자열 리스트 아이템 카드 (시험 일정용)
-  Widget _buildSimpleItem(String text, MaterialColor color) {
+  // 💡 수정: 시험 일정 항목 빌드 (Map 데이터 사용 및 파일 첨부 표시)
+  Widget _buildExamItem(
+      Map<String, dynamic> data,
+      MaterialColor color,
+      {required VoidCallback onDelete, VoidCallback? onTap}
+      ) {
+    final String title = data['examName'] ?? '제목 없음';
+    final String date = data['examDate'] ?? '';
+    // 💡 필수 수정: 시험 장소 키(examLocation)를 사용하여 데이터 추출
+    final String location = data['examLocation'] ?? '';
+
+    // 💡 날짜와 장소 정보가 있을 경우 조합하여 표시할 문자열 생성
+    String displayInfo = '';
+
+    if (date.isNotEmpty) {
+      displayInfo += '일시: $date';
+    }
+
+    if (location.isNotEmpty) {
+      if (date.isNotEmpty) {
+        // 날짜가 있으면 괄호 안에 장소 추가
+        displayInfo += ' (장소: $location)';
+      } else {
+        // 날짜가 없으면 "장소: [장소명]"만 표시
+        displayInfo += '장소: $location';
+      }
+    }
+
+
+    // List<Map<String, String>>으로 타입 캐스팅
+    final List<Map<String, String>> files = (data['materials'] as List?)
+        ?.map((item) => Map<String, String>.from(item))
+        .toList() ?? [];
+    final bool hasFiles = files.isNotEmpty;
+
+    // 클립 버튼 탭 시 파일 목록 모달을 띄우는 함수 (FileListModal 재사용)
+    void _showFilesModal() {
+      if (!hasFiles) return;
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        // FileListModal은 'lectureTitle' 필드를 사용하므로 '시험명'을 넘겨줍니다.
+        builder: (context) => FileListModal(
+          lectureTitle: "$title 자료",
+          files: files,
+          color: color,
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: InkWell(
         borderRadius: BorderRadius.circular(25),
-        onTap: () {
+        onTap: onTap ?? () {
           HapticFeedback.selectionClick();
         },
         child: Ink(
@@ -411,15 +597,59 @@ class _TimeTableButtonState extends State<TimeTableButton> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: color.shade700,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 15,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: color.shade700,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // 💡 수정: 날짜와 장소를 조합한 문자열을 표시
+                      if (displayInfo.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            displayInfo, // 조합된 정보 표시
+                            style: TextStyle(
+                              color: color.shade600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: color.shade700),
+                // ---------------------------------------------------
+                // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
+                // ---------------------------------------------------
+                Row(
+                  children: [
+                    if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
+                      InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: _showFilesModal,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                          child: Icon(Icons.attachment, color: color.shade500, size: 20),
+                        ),
+                      ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: onDelete, // 💡 삭제 버튼
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                        child: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: color.shade700), // 꺾쇠 아이콘
+                  ],
+                ),
               ],
             ),
           ),
@@ -463,7 +693,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   }
 }
 
-// 💡 새 위젯: 파일 목록을 표시하고 파일을 열 수 있는 모달 (BottomSheet)
+// -------------------------------------------------------------------
+// 💡 FileListModal은 변경 없음 (파일 목록 모달)
+// -------------------------------------------------------------------
+
 class FileListModal extends StatelessWidget {
   final String lectureTitle;
   final List<Map<String, String>> files;
@@ -476,7 +709,6 @@ class FileListModal extends StatelessWidget {
     required this.color,
   });
 
-  // 💡 모달 내에서 파일을 열기 위한 함수
   void _openFile(BuildContext context, Map<String, String> file) async {
     final filePath = file["path"];
 
@@ -487,14 +719,11 @@ class FileListModal extends StatelessWidget {
       return;
     }
 
-    // ⚠️ 파일 열기 로직 (활성화)
     final result = await OpenFilex.open(filePath);
 
-    // 파일 열기 후 모달 닫기
     Navigator.pop(context);
 
     if (result.type != ResultType.done) {
-      // 파일 열기 실패 시 스낵바 표시
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("파일 열기 실패: ${result.message}")));
     }
@@ -534,7 +763,7 @@ class FileListModal extends StatelessWidget {
                   title: Text(file["name"] ?? '이름 없음'),
                   subtitle: Text("업로드: ${file["date"]}"),
                   trailing: Icon(Icons.launch, color: color.shade500),
-                  onTap: () => _openFile(context, file), // 💡 파일 열기 함수 호출
+                  onTap: () => _openFile(context, file),
                 );
               },
             ),

@@ -1,4 +1,4 @@
-// 📄 LectureAddPage.dart (수정 완료: 파일 열기 로직 활성화)
+// 📄 LectureAddPage.dart (수정 완료: 수정 모드(initialData) 지원)
 // =====================================================
 
 import 'package:flutter/material.dart';
@@ -6,7 +6,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart'; // 💡 파일 열기 기능 활성화 (pubspec.yaml에 추가 필수)
 
 class LectureAddPage extends StatefulWidget {
-  const LectureAddPage({super.key});
+  // 💡 수정: 초기 데이터를 받는 생성자 추가
+  final Map<String, dynamic>? initialData;
+  const LectureAddPage({super.key, this.initialData});
 
   @override
   State<LectureAddPage> createState() => _LectureAddPageState();
@@ -18,11 +20,23 @@ class _LectureAddPageState extends State<LectureAddPage> {
 
   String title = "";
   String memo = "";
-  final List<Map<String, String>> files = [];
+  // List<Map<String, String>>으로 명시적 캐스팅을 위해 final 대신 var 사용
+  var files = <Map<String, String>>[]; // 💡 수정: 초기화 시 할당 가능하도록 var로 변경
 
   @override
   void initState() {
     super.initState();
+    // 💡 수정: initialData가 있으면 해당 값으로 상태 초기화
+    if (widget.initialData != null) {
+      title = widget.initialData!['title'] ?? "";
+      memo = widget.initialData!['memo'] ?? "";
+      // List<Map<String, String>>으로 타입 캐스팅
+      final List<dynamic>? initialFiles = widget.initialData!['files'];
+      if (initialFiles != null) {
+        files = initialFiles.map((item) => Map<String, String>.from(item)).toList();
+      }
+    }
+
     _titleController = TextEditingController(text: title);
     _memoController = TextEditingController(text: memo);
 
@@ -83,19 +97,23 @@ class _LectureAddPageState extends State<LectureAddPage> {
   void _save() {
     if (title.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("강의 제목을 입력하세요.")));
+          const SnackBar(content: Text("강의 자료 제목을 입력하세요.")));
       return;
     }
 
     final lectureData = {
       'title': title,
+      'memo': memo, // 💡 추가: 메모 저장
       'files': files,
     };
 
     Navigator.pop(context, lectureData);
 
+    // 💡 수정: 스낵바 메시지
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("강의정보가 저장되었습니다!")));
+        .showSnackBar(SnackBar(content: Text(
+        widget.initialData != null ? "강의 자료가 수정되었습니다!" : "강의 자료가 저장되었습니다!"
+    )));
   }
 
   @override
@@ -106,8 +124,10 @@ class _LectureAddPageState extends State<LectureAddPage> {
         backgroundColor: Colors.indigo.shade50,
         elevation: 0,
         centerTitle: true,
+        // 💡 수정: 앱 바 제목
         title: Text(
-          title.isEmpty ? "제목을 입력하세요" : title,
+          // 💡 수정: 수정 모드에 따른 제목 표시
+          title.isEmpty ? (widget.initialData != null ? "강의 자료 수정" : "강의 자료 추가") : title,
           style: const TextStyle(
               fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
@@ -122,7 +142,8 @@ class _LectureAddPageState extends State<LectureAddPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _buildTextField("강의 제목", _titleController),
+          // 💡 수정: 텍스트 필드 라벨
+          _buildTextField("강의 자료 제목", _titleController),
           const SizedBox(height: 20),
           _buildTextField("메모", _memoController, maxLines: 3),
           const SizedBox(height: 30),
