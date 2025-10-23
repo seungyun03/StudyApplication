@@ -1,8 +1,12 @@
+// 📄 FullTimeTable.dart (수정됨: 시간표 셀에 GestureDetector 추가)
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../Providers/TimetableProvider.dart' as tp;
 import 'EditingPageParents.dart';
+// 💡 추가: TimeTablebutton 위젯을 사용하기 위해 import
+import 'TimeTablebutton.dart';
 
 class FullTimeTable extends StatelessWidget {
   const FullTimeTable({super.key});
@@ -108,7 +112,7 @@ class _TopHeaderBarState extends State<_TopHeaderBar> {
               duration: const Duration(milliseconds: 130),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(8),
@@ -235,47 +239,73 @@ class _WeeklyTimetableWidget extends StatelessWidget {
                     ),
                   ),
                   for (final d in days)
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: timetable["$d-$t"]?.bgColor ??
-                              const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Center(
-                          child: timetable["$d-$t"] == null
-                              ? const Text(
-                                  "+",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Color(0xFF9CA3AF),
-                                    fontWeight: FontWeight.bold,
+                    Builder(
+                      builder: (context) {
+                        final cellSubject = timetable["$d-$t"];
+
+                        return Expanded(
+                          // 💡 추가: GestureDetector로 탭 이벤트 처리
+                          child: GestureDetector(
+                            onTap: () {
+                              if (cellSubject == null) {
+                                // 빈 셀을 탭하면 EditingPageParents로 이동 (추가/수정)
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                      const EditingPageParents()),
+                                );
+                              } else {
+                                // 과목이 있는 셀을 탭하면 TimeTableButton으로 이동 (상세 보기)
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TimeTableButton(
+                                      subjectName:
+                                      "${cellSubject.subject} - ${cellSubject.room}",
+                                    ),
                                   ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                );
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: cellSubject?.bgColor ??
+                                    const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(18),
+                                border:
+                                Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                              child: Center(
+                                child: cellSubject == null
+                                    ? const SizedBox.shrink()
+                                    : Column(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      timetable["$d-$t"]!.subject,
+                                      cellSubject.subject,
                                       style: TextStyle(
-                                        color: timetable["$d-$t"]!.textColor,
+                                        color: cellSubject.textColor,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     Text(
-                                      timetable["$d-$t"]!.room,
+                                      cellSubject.room,
                                       style: TextStyle(
-                                        color: timetable["$d-$t"]!.roomColor,
+                                        color: cellSubject.roomColor,
                                         fontSize: 13,
                                       ),
                                     ),
                                   ],
                                 ),
-                        ),
-                      ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                 ],
               ),

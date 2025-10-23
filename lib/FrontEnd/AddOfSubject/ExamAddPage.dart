@@ -1,7 +1,4 @@
-// 📄 ExamAddPage.dart (수정 완료: 시각 선택 기능 추가)
-// =====================================================
-// 📙 시험 일정 추가/수정 페이지
-// =====================================================
+//시험
 
 import 'package:flutter/material.dart';
 // 💡 추가: 파일 선택 및 열기를 위한 패키지
@@ -185,7 +182,7 @@ class _ExamAddPageState extends State<ExamAddPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: Text(widget.initialData == null ? '시험 일정 추가' : '시험 일정 수정'),
+        title: Text(widget.initialData == null ? '시험 추가' : '시험 수정'),
         backgroundColor: const Color(0xFFF9FAFB),
         foregroundColor: const Color(0xFF1E293B),
         elevation: 0,

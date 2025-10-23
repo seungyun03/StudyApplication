@@ -135,7 +135,7 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-// ==================== 시험 + 과제 일정 (데이터 전달 받도록 수정) ====================
+// ==================== 시험 + 과제 (데이터 전달 받도록 수정) ====================
 class _TopCardsRow extends StatelessWidget {
   // 💡 추가: 시험/과제 데이터 및 로딩 상태
   final List<Map<String, dynamic>> exams;
@@ -154,17 +154,17 @@ class _TopCardsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // 💡 데이터 전달 (왼쪽: 시험 일정)
+        // 💡 데이터 전달 (왼쪽: 시험)
         Expanded(child: ExamScheduleWidget(exams: exams, isLoading: isLoading)),
         const SizedBox(width: 16),
-        // 💡 데이터 전달 (오른쪽: 과제 일정으로 변경)
+        // 💡 데이터 전달 (오른쪽: 과제으로 변경)
         Expanded(child: AssignmentScheduleWidget(assignments: assignments, isLoading: isLoading)),
       ],
     );
   }
 }
 
-// ==================== 시험 일정 카드 (데이터 처리 로직 추가) ====================
+// ==================== 시험 카드 (데이터 처리 로직 추가) ====================
 class ExamScheduleWidget extends StatelessWidget {
   // 💡 데이터 필드 추가
   final List<Map<String, dynamic>> exams;
@@ -189,15 +189,15 @@ class ExamScheduleWidget extends StatelessWidget {
 
     return _CardWrapper(
       gradient: const [Color(0xFFFEE2E2), Color(0xFFFDF2F8)],
-      title: "시험 일정", // 💡 제목
-      emptyText: "등록된 시험 일정이 없습니다",
+      title: "시험", // 💡 제목
+      emptyText: "등록된 시험이 없습니다",
       items: upcomingExams, // 필터링된 데이터 전달
       isLoading: isLoading,
     );
   }
 }
 
-// ==================== 과제 일정 카드 (데이터 처리 로직 추가) ====================
+// ==================== 과제 카드 (데이터 처리 로직 추가) ====================
 class AssignmentScheduleWidget extends StatelessWidget {
   // 💡 데이터 필드 추가
   final List<Map<String, dynamic>> assignments;
@@ -226,7 +226,7 @@ class AssignmentScheduleWidget extends StatelessWidget {
 
     return _CardWrapper(
       gradient: const [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
-      title: "과제 일정", // 💡 제목
+      title: "과제", // 💡 제목
       emptyText: "남은 미제출 과제가 없습니다",
       items: pendingAssignments, // 필터링된 데이터 전달
       isLoading: isLoading,
@@ -377,7 +377,7 @@ class _CardWrapper extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: items.map((item) => _buildItemRow(item, title == "시험 일정")).toList(),
+                children: items.map((item) => _buildItemRow(item, title == "시험")).toList(),
               ),
             ),
           ),

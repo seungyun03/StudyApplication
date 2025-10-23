@@ -1,5 +1,4 @@
-// 📄 LectureAddPage.dart (수정 완료: 수정 모드(initialData) 지원)
-// =====================================================
+//자료
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -97,7 +96,7 @@ class _LectureAddPageState extends State<LectureAddPage> {
   void _save() {
     if (title.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("강의 자료 제목을 입력하세요.")));
+          const SnackBar(content: Text("자료 제목을 입력하세요.")));
       return;
     }
 
@@ -112,7 +111,7 @@ class _LectureAddPageState extends State<LectureAddPage> {
     // 💡 수정: 스낵바 메시지
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(
-        widget.initialData != null ? "강의 자료가 수정되었습니다!" : "강의 자료가 저장되었습니다!"
+        widget.initialData != null ? "자료가 수정되었습니다!" : "자료가 저장되었습니다!"
     )));
   }
 
@@ -127,7 +126,7 @@ class _LectureAddPageState extends State<LectureAddPage> {
         // 💡 수정: 앱 바 제목
         title: Text(
           // 💡 수정: 수정 모드에 따른 제목 표시
-          title.isEmpty ? (widget.initialData != null ? "강의 자료 수정" : "강의 자료 추가") : title,
+          title.isEmpty ? (widget.initialData != null ? "자료 수정" : "자료 추가") : title,
           style: const TextStyle(
               fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
@@ -143,7 +142,7 @@ class _LectureAddPageState extends State<LectureAddPage> {
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // 💡 수정: 텍스트 필드 라벨
-          _buildTextField("강의 자료 제목", _titleController),
+          _buildTextField("자료 제목", _titleController),
           const SizedBox(height: 20),
           _buildTextField("메모", _memoController, maxLines: 3),
           const SizedBox(height: 30),

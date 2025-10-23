@@ -4,9 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
-import 'LectureAddPage.dart';
-import 'AssignmentAddPage.dart';
-import 'ExamAddPage.dart';
+import 'AddOfSubject/LectureAddPage.dart';
+import 'AddOfSubject/AssignmentAddPage.dart';
+import 'AddOfSubject/ExamAddPage.dart';
 // 💡 추가: 상태 영속성을 위한 패키지
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // JSON 인코딩/디코딩
@@ -56,7 +56,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   Future<void> _loadData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // 강의 자료 로드
+    // 강의 로드
     final String? lecturesJson = prefs.getString(_lectureKey);
     if (lecturesJson != null) {
       final List<dynamic> decodedList = jsonDecode(lecturesJson);
@@ -85,7 +85,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   Future<void> _saveData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // 강의 자료 저장
+    // 강의 저장
     final String lecturesJson = jsonEncode(lectures);
     await prefs.setString(_lectureKey, lecturesJson);
 
@@ -102,7 +102,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // ➕ 추가/수정 함수 (Add/Edit Functions)
   // -------------------------------------------------------------------
 
-  // 강의 자료 추가 및 수정 처리
+  // 강의 추가 및 수정 처리
   void _openLectureAddPage({int? index}) async { // ✅ async 유지
     final Map<String, dynamic>? initialData =
     index != null ? lectures[index] : null;
@@ -162,7 +162,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     }
   }
 
-  // 시험 일정 추가 및 수정 처리
+  // 시험 추가 및 수정 처리
   void _openExamAddPage({int? index}) async { // ✅ async 유지
     final Map<String, dynamic>? initialData =
     index != null ? exams[index] : null;
@@ -267,9 +267,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                   ),
                   const SizedBox(height: 40),
 
-                  // 📘 강의자료 섹션
+                  // 📘 강의 섹션
                   _buildSection(
-                    title: "강의자료",
+                    title: "강의",
                     expanded: lectureExpanded,
                     onToggle: () =>
                         setState(() => lectureExpanded = !lectureExpanded),
@@ -313,9 +313,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 📙 시험일정 섹션
+                  // 📙 시험 섹션
                   _buildSection(
-                    title: "시험일정",
+                    title: "시험",
                     expanded: examExpanded,
                     onToggle: () =>
                         setState(() => examExpanded = !examExpanded),
@@ -632,7 +632,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   }
 
 
-  // 💡 수정: 시험 일정 항목 빌드 (Map 데이터 사용 및 파일 첨부 표시)
+  // 💡 수정: 시험 항목 빌드 (Map 데이터 사용 및 파일 첨부 표시)
   Widget _buildExamItem(
       Map<String, dynamic> data,
       MaterialColor color,
