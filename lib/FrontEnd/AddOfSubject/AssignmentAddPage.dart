@@ -1,11 +1,9 @@
-//과제
-
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:intl/intl.dart'; // 💡 날짜/시간 포맷을 위해 추가 (pubspec.yaml에 intl: ^0.19.0 등 추가 필요)
 
 class AssignmentAddPage extends StatefulWidget {
-  // 💡 수정: 초기 데이터를 받는 생성자 추가
   final Map<String, dynamic>? initialData;
   const AssignmentAddPage({super.key, this.initialData});
 
@@ -19,21 +17,32 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
 
   String title = "";
   String memo = "";
-  String dueDate = ""; // 'yyyy-mm-dd' 문자열로 저장
+  // 💡 수정: 마감일시를 DateTime 객체로 저장
+  DateTime? _selectedDueDate;
   bool submitted = false;
-  // List<Map<String, String>>으로 명시적 캐스팅을 위해 final 대신 var 사용
-  var files = <Map<String, String>>[]; // 💡 수정: 초기화 시 할당 가능하도록 var로 변경
+  var files = <Map<String, String>>[];
 
   @override
   void initState() {
     super.initState();
-    // 💡 수정: initialData가 있으면 해당 값으로 상태 초기화
+
+    // 💡 초기 데이터 로딩
     if (widget.initialData != null) {
       title = widget.initialData!['title'] ?? "";
       memo = widget.initialData!['memo'] ?? "";
-      dueDate = widget.initialData!['dueDate'] ?? "";
       submitted = widget.initialData!['submitted'] ?? false;
-      // List<Map<String, String>>으로 타입 캐스팅
+
+      // 💡 수정: 초기 dueDate 문자열을 DateTime으로 파싱 (시간 포함 가능성 고려)
+      final String initialDueDateStr = widget.initialData!['dueDate'] ?? '';
+      if (initialDueDateStr.isNotEmpty) {
+        try {
+          // 'yyyy-MM-dd' 또는 'yyyy-MM-dd HH:mm' 형식을 파싱하기 위해 공백을 'T'로 대체
+          _selectedDueDate = DateTime.parse(initialDueDateStr.replaceAll(' ', 'T'));
+        } catch (_) {
+          _selectedDueDate = null;
+        }
+      }
+
       final List<dynamic>? initialFiles = widget.initialData!['files'];
       if (initialFiles != null) {
         files = initialFiles.map((item) => Map<String, String>.from(item)).toList();
@@ -69,16 +78,18 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
   }
 
   // ----------------------------------------------------
-  // 📅 날짜 선택 함수
+  // 📅 날짜/시각 선택 함수 (기존 로직 유지)
   // ----------------------------------------------------
   void _selectDueDate() async {
-    final DateTime? picked = await showDatePicker(
+    // 1. 날짜 선택
+    final DateTime now = DateTime.now();
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.tryParse(dueDate) ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      initialDate: _selectedDueDate ?? now,
+      firstDate: now.subtract(const Duration(days: 365 * 5)),
+      lastDate: now.add(const Duration(days: 365 * 5)),
       locale: const Locale('ko', 'KR'),
-      helpText: '제출 기한 선택',
+      helpText: '제출 기한 날짜 선택',
       cancelText: '취소',
       confirmText: '확인',
       builder: (context, child) {
@@ -95,10 +106,63 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
       },
     );
 
-    if (picked != null) {
+    if (pickedDate != null) {
+      // 2. 날짜가 선택되면, 기존 시간 또는 기본 시간(23:59)으로 초기 설정
+      final TimeOfDay initialTime = _selectedDueDate != null
+          ? TimeOfDay.fromDateTime(_selectedDueDate!)
+          : const TimeOfDay(hour: 23, minute: 59);
+
       setState(() {
-        dueDate =
-        "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+        _selectedDueDate = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          initialTime.hour,
+          initialTime.minute,
+        );
+      });
+
+      // 3. 시각 선택기로 자동 이동
+      await _selectTime();
+    }
+  }
+
+  // 🕒 시각 선택 함수
+  Future<void> _selectTime() async {
+    // 날짜가 먼저 선택되어 있어야 함
+    if (_selectedDueDate == null) return;
+
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      // 현재 _selectedDueDate에 설정된 시간을 초기값으로 사용
+      initialTime: TimeOfDay.fromDateTime(_selectedDueDate!),
+      helpText: '제출 기한 시각 선택',
+      cancelText: '취소',
+      confirmText: '확인',
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.green.shade400,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedTime != null) {
+      setState(() {
+        // 기존 날짜에 새로운 시간 설정
+        _selectedDueDate = DateTime(
+          _selectedDueDate!.year,
+          _selectedDueDate!.month,
+          _selectedDueDate!.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
       });
     }
   }
@@ -135,7 +199,7 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
     setState(() => files.removeAt(index));
   }
 
-  // 💡 수정: 과제 제목과 파일 목록을 Map 형태로 반환
+  // 💡 수정: 시각이 포함된 마감 일시 저장
   void _save() {
     if (title.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -143,18 +207,22 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
       return;
     }
 
+    // 💡 수정: _selectedDueDate를 'yyyy-MM-dd HH:mm' 형식으로 포맷
+    String dueDateString = '';
+    if (_selectedDueDate != null) {
+      dueDateString = DateFormat('yyyy-MM-dd HH:mm').format(_selectedDueDate!);
+    }
+
     final assignmentData = {
       'title': title,
       'memo': memo,
-      'dueDate': dueDate, // 💡 저장
-      'submitted': submitted, // 💡 저장
-      'files': files, // 파일 목록을 포함하여 반환
+      'dueDate': dueDateString, // 💡 시각이 포함된 마감 일시 저장
+      'submitted': submitted,
+      'files': files,
     };
 
-    // 💡 저장 시 수정된 데이터 Map을 이전 화면으로 반환
     Navigator.pop(context, assignmentData);
 
-    // 💡 오류 수정: Text 위젯을 SnackBar의 content에 넣어 전달해야 합니다.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -166,13 +234,17 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 수정: 표시용으로 포맷된 날짜/시각 문자열 (플레이스홀더 통일)
+    final String displayDueDate = _selectedDueDate != null
+        ? DateFormat('yyyy년 MM월 dd일 HH:mm').format(_selectedDueDate!)
+        : "날짜와 시각을 선택하세요";
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         backgroundColor: Colors.green.shade50,
         elevation: 0,
         centerTitle: true,
-        // 💡 수정: 제목이 비어있으면 "과제 제목 입력" 또는 "과제 수정" 표시
         title: Text(
           title.isEmpty
               ? (widget.initialData != null ? "과제 수정" : "과제 제목 입력")
@@ -195,7 +267,8 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
           const SizedBox(height: 20),
           _buildTextField("과제 메모", _memoController, maxLines: 3),
           const SizedBox(height: 20),
-          _buildDateSelectionField("제출 기한", _selectDueDate, dueDate),
+          // 💡 수정: _selectDueDate 함수와 포맷된 displayDueDate 문자열 전달
+          _buildDateSelectionField("제출 기한", _selectDueDate, displayDueDate),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -215,7 +288,6 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
             ],
           ),
           const SizedBox(height: 10),
-          // 💡 파일 항목 빌드
           ...files.asMap().entries.map((e) => _buildFileItem(e.key, e.value)),
           const SizedBox(height: 20),
           Row(
@@ -257,13 +329,16 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
   }
 
   // ----------------------------------------------------
-  // 📅 날짜 선택 필드 위젯 (TextField 대체)
+  // 📅 날짜/시각 선택 필드 위젯
   // ----------------------------------------------------
   Widget _buildDateSelectionField(
       String label,
       VoidCallback onTap,
-      String value,
+      String value, // 포맷된 날짜/시각 문자열
       ) {
+    // 💡 수정: 플레이스홀더 텍스트 통일
+    bool isPlaceholder = value == "날짜와 시각을 선택하세요";
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -284,12 +359,12 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  value.isEmpty ? "제출 기한을 선택하세요" : value,
+                  value,
                   style: TextStyle(
-                    color: value.isEmpty ? Colors.grey.shade600 : Colors.black,
+                    color: isPlaceholder ? Colors.grey.shade600 : Colors.black,
                   ),
                 ),
-                const Icon(Icons.calendar_today, color: Colors.grey),
+                const Icon(Icons.calendar_today, color: Colors.green), // 과제 테마 색상 유지
               ],
             ),
           ),
@@ -299,7 +374,6 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
   }
   // ----------------------------------------------------
 
-  // 💡 수정: _buildFileItem에 탭 이벤트를 추가하여 파일을 열도록 합니다.
   Widget _buildFileItem(int index, Map<String, String> file) {
     final filePath = file["path"];
 
@@ -310,7 +384,6 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
         return;
       }
 
-      // ⚠️ 실제 파일 열기 기능 활성화:
       final result = await OpenFilex.open(filePath);
       if (result.type != ResultType.done) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -325,7 +398,7 @@ class _AssignmentAddPageState extends State<AssignmentAddPage> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.green.shade100),
       ),
-      child: InkWell( // 탭 이벤트를 처리
+      child: InkWell(
         onTap: _openFile,
         borderRadius: BorderRadius.circular(10),
         child: Padding(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // 💡 추가: 파일 선택 및 열기를 위한 패키지
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:intl/intl.dart'; // 💡 intl 패키지 추가
 
 class ExamAddPage extends StatefulWidget {
   // 💡 수정: 초기 데이터를 받는 생성자 추가 (수정 모드를 위해)
@@ -16,15 +17,15 @@ class ExamAddPage extends StatefulWidget {
 
 class _ExamAddPageState extends State<ExamAddPage> {
   late final TextEditingController _nameController;
-  late final TextEditingController _dateController;
+  // ❌ 삭제: late final TextEditingController _dateController;
   // late final TextEditingController _durationController; // ❌ 삭제
   late final TextEditingController _locationController;
   late final TextEditingController _chaptersController;
   late final TextEditingController _notesController;
 
   String examName = "";
-  // 💡 수정: examDate는 이제 'yyyy-MM-dd HH:mm' 형식의 문자열을 저장합니다.
-  String examDate = "";
+  // 💡 변경: String examDate 대신 DateTime? 사용
+  DateTime? _selectedExamDate;
   // String examDuration = ""; // ❌ 삭제
   String examLocation = "";
   String chapters = "";
@@ -38,7 +39,16 @@ class _ExamAddPageState extends State<ExamAddPage> {
     // 💡 수정 3: initialData가 있으면 해당 값으로 상태 초기화
     if (widget.initialData != null) {
       examName = widget.initialData!['examName'] ?? "";
-      examDate = widget.initialData!['examDate'] ?? "";
+      // 💡 수정: examDate 문자열을 DateTime으로 파싱
+      final String initialExamDateStr = widget.initialData!['examDate'] ?? '';
+      if (initialExamDateStr.isNotEmpty) {
+        try {
+          // 'yyyy-MM-dd HH:mm' 형식을 파싱하기 위해 공백을 'T'로 대체
+          _selectedExamDate = DateTime.parse(initialExamDateStr.replaceAll(' ', 'T'));
+        } catch (_) {
+          _selectedExamDate = null;
+        }
+      }
       // examDuration = widget.initialData!['examDuration'] ?? ""; // ❌ 삭제
       examLocation = widget.initialData!['examLocation'] ?? "";
       chapters = widget.initialData!['chapters'] ?? "";
@@ -52,9 +62,9 @@ class _ExamAddPageState extends State<ExamAddPage> {
       }
     }
 
-    // 💡 수정 2: initState에서 컨트롤러를 한 번만 초기화하고 리스너 추가
+    // 💡 수정 2: _dateController 초기화 및 리스너 제거
     _nameController = TextEditingController(text: examName)..addListener(() => examName = _nameController.text);
-    _dateController = TextEditingController(text: examDate)..addListener(() => examDate = _dateController.text);
+    // ❌ _dateController 제거
     // _durationController = TextEditingController(text: examDuration)..addListener(() => examDuration = _durationController.text); // ❌ 삭제
     _locationController = TextEditingController(text: examLocation)..addListener(() => examLocation = _locationController.text);
     _chaptersController = TextEditingController(text: chapters)..addListener(() => chapters = _chaptersController.text);
@@ -64,7 +74,7 @@ class _ExamAddPageState extends State<ExamAddPage> {
   @override
   void dispose() {
     _nameController.dispose();
-    _dateController.dispose();
+    // ❌ _dateController.dispose();
     // _durationController.dispose(); // ❌ 삭제
     _locationController.dispose();
     _chaptersController.dispose();
@@ -73,57 +83,95 @@ class _ExamAddPageState extends State<ExamAddPage> {
   }
 
   // -------------------------------------------------------------------
-  // 📅 시각 선택 함수
+  // 📅 시각 선택 함수 (AssignmentAddPage.dart와 동일하게 변경)
   // -------------------------------------------------------------------
 
-  // 💡 시각/분/월/일을 두 자릿수로 포맷팅하는 헬퍼 함수
-  String _twoDigits(int n) => n.toString().padLeft(2, '0');
-
-  // 💡 수정: 날짜와 시각을 모두 선택하는 함수
-  void _selectDateTime() async {
-    // 1. Date Selection
+  // 💡 _selectDateTime 이름을 _selectExamDate로 변경
+  void _selectExamDate() async {
+    final DateTime now = DateTime.now();
+    // 1. 날짜 선택
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      initialDate: _selectedExamDate ?? now, // 현재 선택된 날짜 또는 현재 날짜
+      firstDate: now.subtract(const Duration(days: 365 * 5)),
+      lastDate: now.add(const Duration(days: 365 * 5)),
+      locale: const Locale('ko', 'KR'),
+      helpText: '시험 날짜 선택',
+      cancelText: '취소',
+      confirmText: '확인',
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.purple.shade400, // 시험 테마 색상으로 변경
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (pickedDate == null) return; // User canceled date selection
 
-    // 2. Time Selection
-    if (mounted) {
-      final TimeOfDay? pickedTime = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.now(),
-          // 24시간 형식 사용
-          builder: (BuildContext context, Widget? child) {
-            return MediaQuery(
-              data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-              child: child!,
-            );
-          }
-      );
+    // 2. 날짜가 선택되면, 기존 시간 또는 기본 시간(09:00)으로 초기 설정
+    // 시험은 보통 아침에 있으므로 09:00를 기본 시간으로 설정
+    final TimeOfDay initialTime = _selectedExamDate != null
+        ? TimeOfDay.fromDateTime(_selectedExamDate!)
+        : const TimeOfDay(hour: 9, minute: 0);
 
-      if (pickedTime == null) return; // User canceled time selection
 
-      // 3. Combine and Format
-      final DateTime finalDateTime = DateTime(
+    setState(() {
+      _selectedExamDate = DateTime(
         pickedDate.year,
         pickedDate.month,
         pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
+        initialTime.hour,
+        initialTime.minute,
       );
+    });
 
-      // Format: 'YYYY-MM-DD HH:MM' (예: 2025-10-23 14:30)
-      final String formattedDate =
-          "${finalDateTime.year}-${_twoDigits(finalDateTime.month)}-${_twoDigits(finalDateTime.day)} "
-          "${_twoDigits(finalDateTime.hour)}:${_twoDigits(finalDateTime.minute)}";
+    // 3. 시각 선택기로 자동 이동
+    await _selectExamTime();
+  }
 
+  // 🕒 시각 선택 함수 (AssignmentAddPage.dart와 동일하게 추가)
+  Future<void> _selectExamTime() async {
+    // 날짜가 먼저 선택되어 있어야 함
+    if (_selectedExamDate == null) return;
+
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      // 현재 _selectedExamDate에 설정된 시간을 초기값으로 사용
+      initialTime: TimeOfDay.fromDateTime(_selectedExamDate!),
+      helpText: '시험 시각 선택',
+      cancelText: '취소',
+      confirmText: '확인',
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.purple.shade400, // 시험 테마 색상으로 변경
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedTime != null) {
       setState(() {
-        examDate = formattedDate;
-        _dateController.text = formattedDate;
+        // 기존 날짜에 새로운 시간 설정
+        _selectedExamDate = DateTime(
+          _selectedExamDate!.year,
+          _selectedExamDate!.month,
+          _selectedExamDate!.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
       });
     }
   }
@@ -164,10 +212,22 @@ class _ExamAddPageState extends State<ExamAddPage> {
   // -------------------------------------------------------------------
 
   void _saveAndClose() {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("시험명을 입력하세요.")));
+      return;
+    }
+
+    // 💡 수정: _selectedExamDate를 'yyyy-MM-dd HH:mm' 형식으로 포맷
+    String examDateString = '';
+    if (_selectedExamDate != null) {
+      examDateString = DateFormat('yyyy-MM-dd HH:mm').format(_selectedExamDate!);
+    }
+
     // 💡 수정: Map 형태로 모든 데이터를 반환합니다.
     final resultData = {
       'examName': _nameController.text,
-      'examDate': _dateController.text, // 💡 시각까지 포함된 문자열
+      'examDate': examDateString, // 💡 시각까지 포함된 문자열
       // 'examDuration': _durationController.text, // ❌ 삭제
       'examLocation': _locationController.text,
       'chapters': _chaptersController.text,
@@ -179,6 +239,11 @@ class _ExamAddPageState extends State<ExamAddPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 추가: 표시용으로 포맷된 날짜/시각 문자열
+    final String displayExamDate = _selectedExamDate != null
+        ? DateFormat('yyyy년 MM월 dd일 HH:mm').format(_selectedExamDate!)
+        : "날짜와 시각을 선택하세요"; // AssignmentAddPage와 유사하게 변경
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -208,14 +273,9 @@ class _ExamAddPageState extends State<ExamAddPage> {
             _buildTextField("시험명", _nameController),
             const SizedBox(height: 24),
 
-            // 💡 수정: 날짜 및 시각 선택 필드
-            _buildDatePickerField(),
+            // 💡 수정: 날짜 및 시각 선택 필드 (AssignmentAddPage와 동일한 스타일로 변경)
+            _buildDateSelectionField("시험 일시 (날짜 및 시간)", _selectExamDate, displayExamDate),
             const SizedBox(height: 24),
-
-            // ❌ 삭제: 시험 시간 필드
-            // _buildTextField("시험 시간", _durationController,
-            //     hintText: "예: 90분, 10:00~11:30"),
-            // const SizedBox(height: 24),
 
             _buildTextField("시험 장소", _locationController),
             const SizedBox(height: 24),
@@ -289,27 +349,42 @@ class _ExamAddPageState extends State<ExamAddPage> {
     ]);
   }
 
-  // 💡 수정: 시험 일시 (날짜 및 시간) 선택 필드 빌더
-  Widget _buildDatePickerField() {
+  // 💡 수정: 날짜/시각 선택 필드 빌더 (AssignmentAddPage.dart와 동일)
+  Widget _buildDateSelectionField(
+      String label,
+      VoidCallback onTap,
+      String value, // 포맷된 날짜/시각 문자열
+      ) {
+    // 💡 수정: 플레이스홀더 텍스트 통일
+    bool isPlaceholder = value == "날짜와 시각을 선택하세요";
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("시험 일시 (날짜 및 시간)",
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         const SizedBox(height: 8),
         InkWell(
-          onTap: _selectDateTime, // 💡 날짜 및 시각 선택 함수 호출
-          child: AbsorbPointer(
-            child: TextField(
-              controller: _dateController,
-              decoration: InputDecoration(
-                hintText: "날짜와 시각을 선택하세요",
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.all(12),
-                suffixIcon: const Icon(Icons.calendar_today, color: Colors.purple),
-              ),
+          onTap: onTap, // 💡 날짜 및 시각 선택 함수 호출
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade400),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: isPlaceholder ? Colors.grey.shade600 : Colors.black,
+                  ),
+                ),
+                const Icon(Icons.calendar_today, color: Colors.purple), // 시험 테마 색상 유지
+              ],
             ),
           ),
         ),
