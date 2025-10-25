@@ -24,12 +24,12 @@ class SubjectInfo extends ChangeNotifier {
 
   // ✨ JSON 변환 (저장 시 사용)
   Map<String, dynamic> toJson() => {
-    'subject': subject,
-    'room': room,
-    'bgColor': bgColor.value,    // Color를 int 값으로 저장
-    'textColor': textColor.value,
-    'roomColor': roomColor.value,
-  };
+        'subject': subject,
+        'room': room,
+        'bgColor': bgColor.value, // Color를 int 값으로 저장
+        'textColor': textColor.value,
+        'roomColor': roomColor.value,
+      };
 
   // ✨ JSON으로부터 객체 생성 (로드 시 사용)
   factory SubjectInfo.fromJson(Map<String, dynamic> json) {
@@ -50,6 +50,9 @@ class TimetableProvider extends ChangeNotifier {
   static const String _timetableKey = 'full_timetable_data';
   Map<String, SubjectInfo?> _timetable = {};
   bool _isTimetableLoading = true;
+
+  // 💡 수정: 스케줄 Provider 업데이트를 위한 콜백 함수 (Future<void> 반환하도록 수정)
+  Future<void> Function()? onTimetableUpdate; // EditingPageParents에서 설정할 예정
 
   Map<String, SubjectInfo?> get timetable => _timetable;
   bool get isTimetableLoading => _isTimetableLoading;
@@ -74,7 +77,8 @@ class TimetableProvider extends ChangeNotifier {
         decodedMap.forEach((key, value) {
           if (value != null) {
             // value가 SubjectInfo의 JSON 맵인 경우
-            loadedTimetable[key] = SubjectInfo.fromJson(value as Map<String, dynamic>);
+            loadedTimetable[key] =
+                SubjectInfo.fromJson(value as Map<String, dynamic>);
           } else {
             // null 값 처리 (비어있는 칸)
             loadedTimetable[key] = null;
@@ -115,23 +119,32 @@ class TimetableProvider extends ChangeNotifier {
   }
 
   /// ✅ 전체 덮어쓰기 (저장 로직 추가)
-  void setAll(Map<String, SubjectInfo?> newTable) {
+  void setAll(Map<String, SubjectInfo?> newTable) async {
+    // 💡 async 추가
     _timetable = {...newTable};
-    saveTimetable(); // ✨ 변경 시 저장
+    await saveTimetable(); // ✨ 변경 시 저장
     notifyListeners();
+    // 💡 추가: setAll이 호출되면 스케줄 업데이트 로직 호출 (EditingPageParents의 pop 시점)
+    if (onTimetableUpdate != null) {
+      await onTimetableUpdate!(); // 💡 await 추가
+    }
   }
 
   /// ✅ 초기화 (저장 로직 추가)
-  void clear() {
+  void clear() async {
+    // 💡 async 추가
     _timetable.clear();
-    saveTimetable(); // ✨ 변경 시 저장
+    await saveTimetable(); // ✨ 변경 시 저장
     notifyListeners();
+    // 💡 추가: 시간표 초기화 시 스케줄 업데이트 로직 호출
+    if (onTimetableUpdate != null) {
+      await onTimetableUpdate!(); // 💡 await 추가
+    }
   }
 }
 
-
 /// ---------------------------
-/// 📘 시험/과제 스케줄 Provider (원래 로직 유지)
+/// 📘 시험/과제 스케줄 Provider (원래 로직 유지 + 과목 스케줄 삭제/업데이트 기능 추가)
 /// ---------------------------
 class ScheduleProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _allExams = [];
@@ -141,11 +154,48 @@ class ScheduleProvider extends ChangeNotifier {
   // 💡 Getter 정의 (HomePage와 TimeTableButton이 사용)
   List<Map<String, dynamic>> get allExams => _allExams;
   List<Map<String, dynamic>> get allAssignments => _allAssignments;
-  List<Map<String, dynamic>> get allSchedules => [..._allExams, ..._allAssignments];
+  List<Map<String, dynamic>> get allSchedules =>
+      [..._allExams, ..._allAssignments];
   bool get isLoading => _isLoading;
 
   ScheduleProvider() {
     loadAllSchedules(); // Provider 생성 시 데이터 로드 시작
+  }
+
+  /// ✅ 과목 이름 목록을 기반으로 해당 과목과 관련 없는 스케줄만 유지하고 새로 로드하는 함수
+  /// 💡 수정: 키 접두사(exams_, assignments_)를 제거하는 방식으로 과목 이름 추출 로직 변경
+  Future<void> removeSchedulesNotIn(Set<String> validSubjects) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final allKeys = prefs.getKeys();
+
+    // 시간표에 없는 과목에 대한 스케줄 키 삭제
+    // 💡 핵심 수정 시작: validSubjects에 없는 과목의 스케줄만 삭제
+    for (final key in allKeys) {
+      String? subjectNamePart;
+      const examsPrefix = 'exams_';
+      const assignmentsPrefix = 'assignments_';
+
+      // 'exams_'로 시작하는 경우
+      if (key.startsWith(examsPrefix)) {
+        // 접두사를 제거하여 과목 이름 추출
+        subjectNamePart = key.substring(examsPrefix.length);
+      }
+      // 'assignments_'로 시작하는 경우
+      else if (key.startsWith(assignmentsPrefix)) {
+        // 접두사를 제거하여 과목 이름 추출
+        subjectNamePart = key.substring(assignmentsPrefix.length);
+      }
+      // 그 외의 키는 무시합니다.
+
+      // 스케줄 키이며, 유효한 과목 목록에 없는 경우 해당 스케줄 데이터를 삭제
+      if (subjectNamePart != null && !validSubjects.contains(subjectNamePart)) {
+        await prefs.remove(key);
+      }
+    }
+    // 💡 핵심 수정 끝
+
+    // 데이터 변경 후 전체 스케줄을 다시 로드하여 UI에 반영
+    await loadAllSchedules();
   }
 
   /// ✅ 모든 과목의 스케줄을 SharedPreferences에서 로드 (HomePage와 TimeTableButton이 사용)
@@ -166,28 +216,54 @@ class ScheduleProvider extends ChangeNotifier {
         try {
           final List<dynamic> decodedList = jsonDecode(jsonString);
 
+          // 💡 수정 시작: subjectName을 추출하여 각 항목에 추가
+          String subjectName = '';
           if (key.startsWith('exams_')) {
-            loadedExams.addAll(
-                decodedList.map((item) => item as Map<String, dynamic>));
+            subjectName = key.substring('exams_'.length);
           } else if (key.startsWith('assignments_')) {
-            loadedAssignments.addAll(
-                decodedList.map((item) => item as Map<String, dynamic>));
+            subjectName = key.substring('assignments_'.length);
           }
+
+          if (key.startsWith('exams_')) {
+            loadedExams.addAll(decodedList.map((item) {
+              final map = item as Map<String, dynamic>;
+              map['subjectName'] = subjectName; // 과목명 추가 (수정/추가)
+              return map;
+            }));
+          } else if (key.startsWith('assignments_')) {
+            loadedAssignments.addAll(decodedList.map((item) {
+              final map = item as Map<String, dynamic>;
+              map['subjectName'] = subjectName; // 과목명 추가 (수정/추가)
+              return map;
+            }));
+          }
+          // 💡 수정 끝
         } catch (e) {
           // JSON 파싱 오류 무시
         }
       }
     }
 
-    // 날짜별로 정렬 (미래 일정이 먼저 오도록)
+    // 날짜별로 정렬 (미래 일정이 먼저 오도록 - 오름차순)
     loadedExams.sort((a, b) {
-      final dateA = DateTime.tryParse(a['examDate'] ?? '9999-12-31') ?? DateTime(9999);
-      final dateB = DateTime.tryParse(b['examDate'] ?? '9999-12-31') ?? DateTime(9999);
+      // 💡 수정: examDate 파싱 오류 방지 위해 tryParse 사용, ' '를 'T'로 대체하여 DateTime 형식 처리 개선
+      final dateA = DateTime.tryParse(
+              (a['examDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+          DateTime(9999);
+      final dateB = DateTime.tryParse(
+              (b['examDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+          DateTime(9999);
       return dateA.compareTo(dateB);
     });
+    // 💡 수정: 과제 정렬 로직을 시험 정렬과 동일하게, 마감일 기준 오름차순으로 수정
     loadedAssignments.sort((a, b) {
-      final dateA = DateTime.tryParse(a['dueDate'] ?? '9999-12-31') ?? DateTime(9999);
-      final dateB = DateTime.tryParse(b['dueDate'] ?? '9999-12-31') ?? DateTime(9999);
+      // 💡 수정: dueDate 파싱 오류 방지 위해 tryParse 사용, ' '를 'T'로 대체하여 DateTime 형식 처리 개선
+      final dateA = DateTime.tryParse(
+              (a['dueDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+          DateTime(9999);
+      final dateB = DateTime.tryParse(
+              (b['dueDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+          DateTime(9999);
       return dateA.compareTo(dateB);
     });
 
