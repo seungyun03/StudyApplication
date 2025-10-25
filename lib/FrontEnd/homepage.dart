@@ -1,9 +1,14 @@
-// 📄 homepage.dart (D-Day 표시 기능 추가)
+// 📄 homepage.dart (FullTimeTable 오류 해결 버전)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:study_app/FrontEnd/EditingPageParents.dart';
-import 'package:study_app/FrontEnd/FullTimeTable.dart';
+
+// 💡 (수정) EditingPageParents에 'as ep' prefix를 사용하여 클래스 이름 충돌을 확실하게 해결
+import 'package:study_app/FrontEnd/EditingPageParents.dart' as ep;
+
+// 💡 (수정) FullTimeTable에 'as ft' prefix를 사용하여 'FullTimeTable' isn't a class 오류를 해결
+import 'package:study_app/FrontEnd/FullTimeTable.dart' as ft;
+
 import 'package:study_app/FrontEnd/TimeTablebutton.dart';
 import '../Providers/TimetableProvider.dart' as tp;
 
@@ -64,10 +69,11 @@ class _HomePageState extends State<HomePage> {
     */
   }
 
+  // 💡 _openEditingPage 함수 내에서도 접두사(ep.)를 사용하도록 수정
   Future<void> _openEditingPage() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const EditingPageParents()),
+      MaterialPageRoute(builder: (_) => const ep.EditingPageParents()),
     );
     if (mounted) {
       setState(() {}); // 기존 새로고침
@@ -181,8 +187,10 @@ class _TopCardsRow extends StatelessWidget {
     void handleItemTap(Map<String, dynamic> item) async {
       // 💡 핵심 수정: subjectName을 명시적으로 'subjectName' 키에서 가져옵니다.
       final String subjectName = item['subjectName'] as String? ?? '과목 정보 없음';
-      if (subjectName == '과목 정보 없음' || subjectName.isEmpty)
+      // 💡 수정: if 문에 중괄호({})를 추가하여 코드 스타일 경고를 해결합니다.
+      if (subjectName == '과목 정보 없음' || subjectName.isEmpty) {
         return; // 과목명이 없거나 비어있으면 동작하지 않음
+      }
 
       // TimeTableButton으로 이동하며 데이터 전달
       // 💡 수정: subjectName은 이미 TimetableProvider.dart에서 '과목명'만 저장되도록 처리되었습니다.
@@ -861,10 +869,12 @@ class WeeklyTimetableWidget extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: () {
+                      // 💡 수정: FullTimeTable isn't a class 오류 해결을 위해 prefix (ft.) 사용
                       Navigator.push(
                         context,
+                        // 🚨 핵심 수정: ft. prefix 사용
                         MaterialPageRoute(
-                            builder: (_) => const FullTimeTable()),
+                            builder: (_) => const ft.FullTimeTable()),
                       );
                     },
                     child: const Text(
@@ -878,10 +888,12 @@ class WeeklyTimetableWidget extends StatelessWidget {
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () {
+                      // 💡 수정: EditingPageParents에 prefix (ep.) 사용
                       Navigator.push(
                         context,
+                        // 🚨 핵심 수정: ep. prefix 사용
                         MaterialPageRoute(
-                            builder: (_) => const EditingPageParents()),
+                            builder: (_) => const ep.EditingPageParents()),
                       );
                     },
                     child: const Text(
@@ -948,11 +960,13 @@ class WeeklyTimetableWidget extends StatelessWidget {
                               child: GestureDetector(
                                 onTap: () {
                                   if (cellSubject == null) {
+                                    // 💡 수정: EditingPageParents에 prefix (ep.) 사용
                                     Navigator.push(
                                       context,
+                                      // 🚨 핵심 수정: ep. prefix 사용
                                       MaterialPageRoute(
                                           builder: (_) =>
-                                              const EditingPageParents()),
+                                              const ep.EditingPageParents()),
                                     );
                                   } else {
                                     // 💡 수정: TimeTableButton에 과목명만 전달하도록 수정
