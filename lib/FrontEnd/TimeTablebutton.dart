@@ -12,7 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // JSON 인코딩/디코딩
 // 💡 추가: Provider 임포트
 import 'package:provider/provider.dart';
-import '../Providers/TimetableProvider.dart' as tp; // ScheduleProvider가 이 파일 안에 정의되어 있습니다.
+import '../Providers/TimetableProvider.dart'
+    as tp; // ScheduleProvider가 이 파일 안에 정의되어 있습니다.
 
 class TimeTableButton extends StatefulWidget {
   final String subjectName;
@@ -65,7 +66,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     if (itemData.containsKey('dueDate')) {
       // 1. 과제: 기존 목록에서 해당 항목의 인덱스를 찾음
       final index = assignments.indexWhere((a) =>
-      a['title'] == itemData['title'] && a['dueDate'] == itemData['dueDate']);
+          a['title'] == itemData['title'] &&
+          a['dueDate'] == itemData['dueDate']);
 
       if (index != -1) {
         // 찾았으면 수정 페이지로 이동
@@ -77,7 +79,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     } else if (itemData.containsKey('examDate')) {
       // 2. 시험: 기존 목록에서 해당 항목의 인덱스를 찾음
       final index = exams.indexWhere((e) =>
-      e['examName'] == itemData['examName'] && e['examDate'] == itemData['examDate']);
+          e['examName'] == itemData['examName'] &&
+          e['examDate'] == itemData['examDate']);
 
       if (index != -1) {
         // 찾았으면 수정 페이지로 이동
@@ -101,14 +104,16 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     final String? lecturesJson = prefs.getString(_lectureKey);
     if (lecturesJson != null) {
       final List<dynamic> decodedList = jsonDecode(lecturesJson);
-      lectures = decodedList.map((item) => item as Map<String, dynamic>).toList();
+      lectures =
+          decodedList.map((item) => item as Map<String, dynamic>).toList();
     }
 
     // 과제 목록 로드
     final String? assignmentsJson = prefs.getString(_assignmentKey);
     if (assignmentsJson != null) {
       final List<dynamic> decodedList = jsonDecode(assignmentsJson);
-      assignments = decodedList.map((item) => item as Map<String, dynamic>).toList();
+      assignments =
+          decodedList.map((item) => item as Map<String, dynamic>).toList();
     }
 
     // 시험 목록 로드
@@ -164,7 +169,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       // 💡 수정: bool.compareTo 대신 int로 변환하여 비교 (false=0, true=1)
       final int aSubmittedValue = aSubmitted ? 1 : 0;
       final int bSubmittedValue = bSubmitted ? 1 : 0;
-      final int submittedComparison = aSubmittedValue.compareTo(bSubmittedValue);
+      final int submittedComparison =
+          aSubmittedValue.compareTo(bSubmittedValue);
 
       if (submittedComparison != 0) {
         return submittedComparison;
@@ -177,8 +183,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       if (aDueDateStr.isNotEmpty && bDueDateStr.isNotEmpty) {
         try {
           // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-          final DateTime aDate = DateTime.parse(aDueDateStr.replaceAll(' ', 'T'));
-          final DateTime bDate = DateTime.parse(bDueDateStr.replaceAll(' ', 'T'));
+          final DateTime aDate =
+              DateTime.parse(aDueDateStr.replaceAll(' ', 'T'));
+          final DateTime bDate =
+              DateTime.parse(bDueDateStr.replaceAll(' ', 'T'));
           return aDate.compareTo(bDate); // 빠른 날짜가 더 작음
         } catch (_) {
           // 날짜 파싱 오류 시 문자열로 비교
@@ -187,12 +195,11 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       } else if (aDueDateStr.isNotEmpty) {
         return -1; // a만 기한이 있으면 a가 위로
       } else if (bDueDateStr.isNotEmpty) {
-        return 1;  // b만 기한이 있으면 b가 위로
+        return 1; // b만 기한이 있으면 b가 위로
       }
 
       return 0; // 모두 기한이 없으면 순서 유지
     });
-
 
     // 3. 시험 정렬:
     //   1) 종료되지 않은 시험이 종료된 시험보다 위로
@@ -236,7 +243,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       } else if (aDateTime != null) {
         return -1; // a만 유효한 날짜가 있으면 a가 위로
       } else if (bDateTime != null) {
-        return 1;  // b만 유효한 날짜가 있으면 b가 위로
+        return 1; // b만 유효한 날짜가 있으면 b가 위로
       }
 
       // 유효한 날짜가 없으면 문자열로 비교하거나 기본 순서 유지
@@ -244,21 +251,24 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     });
   }
 
-
   // -------------------------------------------------------------------
   // ➕ 추가/수정 함수 (Add/Edit Functions)
   // -------------------------------------------------------------------
 
   // 강의 추가 및 수정 처리
-  void _openLectureAddPage({int? index}) async { // ✅ async 유지
+  void _openLectureAddPage({int? index}) async {
+    // ✅ async 유지
     final Map<String, dynamic>? initialData =
-    index != null ? lectures[index] : null;
+        index != null ? lectures[index] : null;
 
     final newLectureData = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => LectureAddPage(initialData: initialData)));
+        MaterialPageRoute(
+            builder: (_) => LectureAddPage(initialData: initialData)));
 
-    if (newLectureData != null && newLectureData is Map<String, dynamic> && newLectureData['title'] != null) {
+    if (newLectureData != null &&
+        newLectureData is Map<String, dynamic> &&
+        newLectureData['title'] != null) {
       setState(() {
         if (index != null) {
           // 수정 (Edit)
@@ -276,9 +286,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   }
 
   // 과제 추가 및 수정 처리
-  void _openAssignmentAddPage({int? index}) async { // ✅ async 유지
+  void _openAssignmentAddPage({int? index}) async {
+    // ✅ async 유지
     final Map<String, dynamic>? initialData =
-    index != null ? assignments[index] : null;
+        index != null ? assignments[index] : null;
 
     final newAssignmentData = await Navigator.push(
         context,
@@ -288,7 +299,6 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     if (newAssignmentData != null &&
         newAssignmentData is Map<String, dynamic> &&
         newAssignmentData['title'] != null) {
-
       newAssignmentData['subjectName'] = widget.subjectName; // 과목명 추가
 
       setState(() {
@@ -308,20 +318,25 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
       // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
       if (mounted) {
-        await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+        await Provider.of<tp.ScheduleProvider>(context, listen: false)
+            .loadAllSchedules();
       }
     }
   }
 
   // 시험 추가 및 수정 처리
-  void _openExamAddPage({int? index}) async { // ✅ async 유지
+  void _openExamAddPage({int? index}) async {
+    // ✅ async 유지
     final Map<String, dynamic>? initialData =
-    index != null ? exams[index] : null;
+        index != null ? exams[index] : null;
 
     final newExamData = await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => ExamAddPage(initialData: initialData)));
+        context,
+        MaterialPageRoute(
+            builder: (_) => ExamAddPage(initialData: initialData)));
 
-    if (newExamData != null && newExamData is Map<String, dynamic>) { // 💡 newExamData가 Map인지 확인
+    if (newExamData != null && newExamData is Map<String, dynamic>) {
+      // 💡 newExamData가 Map인지 확인
 
       newExamData['subjectName'] = widget.subjectName; // 과목명 추가
 
@@ -342,7 +357,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
       // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
       if (mounted) {
-        await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+        await Provider.of<tp.ScheduleProvider>(context, listen: false)
+            .loadAllSchedules();
       }
     }
   }
@@ -351,7 +367,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // 🗑️ 삭제 함수 (Delete Functions)
   // -------------------------------------------------------------------
 
-  void _deleteLecture(int index) async { // ✅ async 추가
+  void _deleteLecture(int index) async {
+    // ✅ async 추가
     setState(() {
       lectures.removeAt(index);
       // 💡 삭제 후 정렬 적용 (강의는 추가 순서이므로 사실상 영향 없음)
@@ -361,7 +378,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     await _saveData();
   }
 
-  void _deleteAssignment(int index) async { // ✅ async 추가
+  void _deleteAssignment(int index) async {
+    // ✅ async 추가
     setState(() {
       assignments.removeAt(index);
       // 💡 삭제 후 정렬 적용
@@ -373,11 +391,13 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
     if (mounted) {
-      await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+      await Provider.of<tp.ScheduleProvider>(context, listen: false)
+          .loadAllSchedules();
     }
   }
 
-  void _deleteExam(int index) async { // ✅ async 추가
+  void _deleteExam(int index) async {
+    // ✅ async 추가
     setState(() {
       exams.removeAt(index);
       // 💡 삭제 후 정렬 적용
@@ -389,10 +409,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
     if (mounted) {
-      await Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
+      await Provider.of<tp.ScheduleProvider>(context, listen: false)
+          .loadAllSchedules();
     }
   }
-
 
   // -------------------------------------------------------------------
   // ✨ D-Day 계산 헬퍼 함수
@@ -403,7 +423,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     }
     try {
       // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-      final DateTime targetDateTime = DateTime.parse(dateString.replaceAll(' ', 'T'));
+      final DateTime targetDateTime =
+          DateTime.parse(dateString.replaceAll(' ', 'T'));
       final DateTime now = DateTime.now();
 
       // 💡 checkPassed가 true인 경우 (시험), 시간이 지났으면 '종료' 표시
@@ -414,7 +435,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       // 현재 날짜 (시/분/초 무시)
       final DateTime nowDay = DateTime(now.year, now.month, now.day);
       // 목표 날짜 (시/분/초 무시)
-      final DateTime targetDay = DateTime(targetDateTime.year, targetDateTime.month, targetDateTime.day);
+      final DateTime targetDay = DateTime(
+          targetDateTime.year, targetDateTime.month, targetDateTime.day);
 
       final Duration difference = targetDay.difference(nowDay);
       final int days = difference.inDays;
@@ -435,7 +457,6 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       return ''; // 날짜 파싱 오류 시 빈 문자열 반환
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +496,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     expanded: lectureExpanded,
                     onToggle: () =>
                         setState(() => lectureExpanded = !lectureExpanded),
-                    onAdd: () => _openLectureAddPage(), // 💡 추가 기능 (index: null)
+                    onAdd: () =>
+                        _openLectureAddPage(), // 💡 추가 기능 (index: null)
                     gradient: const LinearGradient(
                       colors: [Color(0xFFEEF2FF), Color(0xFFEEF6FF)],
                     ),
@@ -497,8 +519,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     title: "과제",
                     expanded: assignmentExpanded,
                     onToggle: () => setState(
-                            () => assignmentExpanded = !assignmentExpanded),
-                    onAdd: () => _openAssignmentAddPage(), // 💡 과제 추가 (index: null)
+                        () => assignmentExpanded = !assignmentExpanded),
+                    onAdd: () =>
+                        _openAssignmentAddPage(), // 💡 과제 추가 (index: null)
                     gradient: const LinearGradient(
                       colors: [Color(0xFFEFFEF6), Color(0xFFECFDF5)],
                     ),
@@ -618,7 +641,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
             decoration: BoxDecoration(
               gradient: gradient,
               borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -665,19 +688,19 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                 color: Colors.white,
                 border: Border.all(color: const Color(0xFFE5E7EB)),
                 borderRadius:
-                const BorderRadius.vertical(bottom: Radius.circular(20)),
+                    const BorderRadius.vertical(bottom: Radius.circular(20)),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: children.isNotEmpty
                     ? Column(children: children)
                     : Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    "$title 항목이 없습니다.",
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                ),
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          "$title 항목이 없습니다.",
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ),
               ),
             ),
         ],
@@ -690,23 +713,24 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // -------------------------------------------------------------------
 
   // 💡 강의/과제 리스트 아이템 카드 (파일 처리 로직 포함)
-  Widget _buildItemWithFile(
-      Map<String, dynamic> data,
-      MaterialColor color,
+  Widget _buildItemWithFile(Map<String, dynamic> data, MaterialColor color,
       {required VoidCallback onDelete, VoidCallback? onTap} // 💡 onTap 콜백 유지
       ) {
     final String title = data['title'] ?? '제목 없음';
 
     // 💡 'submitted' 키가 있을 경우에만 과제로 간주하여 상태를 추출합니다.
     final bool isAssignment = data.containsKey('submitted');
-    final bool submitted = isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
+    final bool submitted =
+        isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
 
     // 💡 수정: dueDate를 포맷팅된 문자열로 변경
     final String dateString = isAssignment ? (data['dueDate'] ?? '') : '';
     String displayDueDate = '';
     // 💡 D-Day 계산
-    final String dDayString = isAssignment && dateString.isNotEmpty && !submitted
-        ? _getDDayString(dateString) : ''; // 미제출 과제에만 D-Day 표시
+    final String dDayString =
+        isAssignment && dateString.isNotEmpty && !submitted
+            ? _getDDayString(dateString)
+            : ''; // 미제출 과제에만 D-Day 표시
 
     if (dateString.isNotEmpty) {
       try {
@@ -727,11 +751,11 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     }
     final String dueDate = displayDueDate;
 
-
     // List<Map<String, String>>으로 타입 캐스팅
     final List<Map<String, String>> files = (data['files'] as List?)
-        ?.map((item) => Map<String, String>.from(item))
-        .toList() ?? [];
+            ?.map((item) => Map<String, String>.from(item))
+            .toList() ??
+        [];
     final bool hasFiles = files.isNotEmpty;
 
     // 클립 버튼 탭 시 파일 목록 모달을 띄우는 함수
@@ -755,11 +779,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       child: InkWell(
         borderRadius: BorderRadius.circular(25),
         // 항목 전체 탭 시 동작 (수정 페이지 이동)
-        onTap: onTap ?? () {
-          HapticFeedback.selectionClick();
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("$title 항목을 선택했습니다. (상세 페이지 이동 가정)")));
-        },
+        onTap: onTap ??
+            () {
+              HapticFeedback.selectionClick();
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("$title 항목을 선택했습니다. (상세 페이지 이동 가정)")));
+            },
         child: Ink(
           decoration: BoxDecoration(
             color: color.shade50,
@@ -794,10 +819,14 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                           children: [
                             // 💡 제출 상태 태그
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              margin: const EdgeInsets.only(right: 8), // 우측 여백 추가
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              margin:
+                                  const EdgeInsets.only(right: 8), // 우측 여백 추가
                               decoration: BoxDecoration(
-                                color: submitted ? Colors.green.shade400 : Colors.red.shade400,
+                                color: submitted
+                                    ? Colors.green.shade400
+                                    : Colors.red.shade400,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -812,12 +841,15 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                             // 💡 D-Day 태그 (미제출일 경우만 표시)
                             if (dDayString.isNotEmpty)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
                                 margin: const EdgeInsets.only(right: 8),
                                 decoration: BoxDecoration(
                                   color: dDayString == 'D-Day'
                                       ? Colors.red.shade600
-                                      : (dDayString.startsWith('D+') ? Colors.orange.shade600 : color.shade600),
+                                      : (dDayString.startsWith('D+')
+                                          ? Colors.orange.shade600
+                                          : color.shade600),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
@@ -855,16 +887,20 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                         borderRadius: BorderRadius.circular(10),
                         onTap: _showFilesModal,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                          child: Icon(Icons.attachment, color: color.shade500, size: 20),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0, vertical: 2.0),
+                          child: Icon(Icons.attachment,
+                              color: color.shade500, size: 20),
                         ),
                       ),
                     InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: onDelete, // 💡 삭제 버튼
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                        child: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4.0, vertical: 2.0),
+                        child: Icon(Icons.delete_outline,
+                            color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
                       ),
                     ),
                     Icon(Icons.chevron_right, color: color.shade700), // 꺾쇠 아이콘
@@ -878,13 +914,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     );
   }
 
-
   // 💡 수정: 시험 항목 빌드 (Map 데이터 사용 및 파일 첨부 표시) - 시험 종료/D-Day 태그 로직 추가
-  Widget _buildExamItem(
-      Map<String, dynamic> data,
-      MaterialColor color,
-      {required VoidCallback onDelete, VoidCallback? onTap}
-      ) {
+  Widget _buildExamItem(Map<String, dynamic> data, MaterialColor color,
+      {required VoidCallback onDelete, VoidCallback? onTap}) {
     final String title = data['examName'] ?? '제목 없음';
     final String date = data['examDate'] ?? ''; // 예: 2024-10-23 14:00
     // 💡 필수 수정: 시험 장소 키(examLocation)를 사용하여 데이터 추출
@@ -898,7 +930,6 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     String displayDate = '';
     // 💡 D-Day 계산 (종료 여부 체크 포함)
     String dDayString = '';
-
 
     if (date.isNotEmpty) {
       try {
@@ -922,14 +953,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
         final minute = examDateTime.minute.toString().padLeft(2, '0');
 
         displayDate = '$year/$month/$day $hour:$minute';
-
       } catch (e) {
         // 파싱 실패 시 원본 문자열 사용
         displayDate = date;
         print("Error parsing exam date: $e");
       }
     }
-
 
     // 💡 날짜와 장소 정보가 있을 경우 조합하여 표시할 문자열 생성
     String displayInfo = '';
@@ -948,11 +977,11 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       }
     }
 
-
     // List<Map<String, String>>으로 타입 캐스팅
     final List<Map<String, String>> files = (data['materials'] as List?)
-        ?.map((item) => Map<String, String>.from(item))
-        .toList() ?? [];
+            ?.map((item) => Map<String, String>.from(item))
+            .toList() ??
+        [];
     final bool hasFiles = files.isNotEmpty;
 
     // 클립 버튼 탭 시 파일 목록 모달을 띄우는 함수 (FileListModal 재사용)
@@ -976,9 +1005,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: InkWell(
         borderRadius: BorderRadius.circular(25),
-        onTap: onTap ?? () {
-          HapticFeedback.selectionClick();
-        },
+        onTap: onTap ??
+            () {
+              HapticFeedback.selectionClick();
+            },
         child: Ink(
           decoration: BoxDecoration(
             color: color.shade50,
@@ -1011,7 +1041,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                           // 💡 시험 종료 상태 태그
                           if (isExamPassed)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
                               margin: const EdgeInsets.only(right: 8),
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade500, // 종료된 시험은 회색으로
@@ -1030,10 +1061,13 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                           // 💡 D-Day 태그 (미종료된 경우만 표시)
                           if (!isExamPassed && dDayString.isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
                               margin: const EdgeInsets.only(right: 8),
                               decoration: BoxDecoration(
-                                color: dDayString == 'D-Day' ? Colors.red.shade600 : color.shade600,
+                                color: dDayString == 'D-Day'
+                                    ? Colors.red.shade600
+                                    : color.shade600,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -1070,16 +1104,20 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                         borderRadius: BorderRadius.circular(10),
                         onTap: _showFilesModal,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                          child: Icon(Icons.attachment, color: color.shade500, size: 20),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0, vertical: 2.0),
+                          child: Icon(Icons.attachment,
+                              color: color.shade500, size: 20),
                         ),
                       ),
                     InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: onDelete, // 💡 삭제 버튼
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                        child: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4.0, vertical: 2.0),
+                        child: Icon(Icons.delete_outline,
+                            color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
                       ),
                     ),
                     Icon(Icons.chevron_right, color: color.shade700), // 꺾쇠 아이콘
@@ -1149,8 +1187,8 @@ class FileListModal extends StatelessWidget {
 
     if (filePath == null || filePath.isEmpty) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("파일 경로를 찾을 수 없습니다.")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("파일 경로를 찾을 수 없습니다.")));
       return;
     }
 
@@ -1159,8 +1197,8 @@ class FileListModal extends StatelessWidget {
     Navigator.pop(context);
 
     if (result.type != ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("파일 열기 실패: ${result.message}")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("파일 열기 실패: ${result.message}")));
     }
   }
 
