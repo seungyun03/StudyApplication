@@ -1,4 +1,5 @@
 // 📄 TimetableProvider.dart (SharedPreferences를 이용한 영구 저장 로직 포함)
+// 🚨 수정: deleteSubject 함수의 반환 타입을 Future<void>로 변경
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -131,8 +132,9 @@ class TimetableProvider extends ChangeNotifier {
     }
   }
 
+  // 🚨 수정: void -> Future<void>
   /// ✅ [추가] 과목 영구 삭제 (subjectList에서 사용)
-  void deleteSubject(SubjectInfo subjectToDelete) async {
+  Future<void> deleteSubject(SubjectInfo subjectToDelete) async {
     // 1. 과목 목록에서 제거
     _subjectList.remove(subjectToDelete);
 

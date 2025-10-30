@@ -49,10 +49,11 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
     });
   }
 
-  // ⭐️ 추가: 과목 영구 삭제 실행 (Provider 호출 및 스케줄 정리)
-  void deleteSubject(SubjectInfo subject) {
+  // ⭐️ 수정: 과목 영구 삭제 실행 (Provider 호출 및 스케줄 정리)
+  // TimetableProvider의 deleteSubject가 Future<void>를 반환하도록 수정되었으므로 await 사용이 가능합니다.
+  void deleteSubject(SubjectInfo subject) async {
     // 1. TimetableProvider에서 과목 영구 삭제 및 시간표 정리
-    context.read<TimetableProvider>().deleteSubject(subject);
+    await context.read<TimetableProvider>().deleteSubject(subject); // ✅ await 사용
 
     // 2. ScheduleProvider에서 해당 과목 관련 스케줄 정리
     // 삭제 후 업데이트된 시간표를 가져와 유효한 과목 목록을 추출합니다.
@@ -60,8 +61,7 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
     final validSubjects = _getValidSubjects(updatedTimetable);
 
     // ScheduleProvider의 cleanup 함수 호출
-    // ScheduleProvider는 TimetableProvider.dart 파일에 정의되어 있으므로 접근 가능
-    context.read<ScheduleProvider>().removeSchedulesNotIn(validSubjects);
+    await context.read<ScheduleProvider>().removeSchedulesNotIn(validSubjects); // ✅ await 사용
   }
 
   @override
@@ -337,7 +337,7 @@ class _AddSubjectButton extends StatelessWidget {
               context: context,
               barrierDismissible: false,
               builder: (BuildContext dialogContext) {
-                // ✅ AddSubjectModelPage.dart 파일의 AddSubjectModalPage 위젯 호출
+                // ✅ AddSubjectModalPage.dart 파일의 AddSubjectModalPage 위젯 호출
                 return const AddSubjectModalPage();
               },
             );
@@ -355,6 +355,7 @@ class _AddSubjectButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(30),
               border: Border.all(color: const Color(0xFFE5E7EB)),
               boxShadow: const [
+                // 🚨 오타 수정: BoxBoxShadow -> BoxShadow
                 BoxShadow(
                     color: Color(0x10000000), offset: Offset(0, 2), blurRadius: 4)
               ],
