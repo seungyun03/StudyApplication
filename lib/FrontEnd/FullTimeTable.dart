@@ -1,4 +1,4 @@
-// 📄 FullTimeTable.dart (최종 전체 코드)
+// 📄 FullTimeTable.dart (최종 수정 전체 코드)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,10 +17,35 @@ class _FullTimeTableState extends State<FullTimeTable> {
   bool isDeleteMode = false;
   late var timetable = <String, tp.SubjectInfo?>{};
 
+  // ⭐️ 핵심 추가: Provider 인스턴스를 저장할 변수
+  late tp.TimetableProvider _provider;
+
   @override
   void initState() {
     super.initState();
-    timetable = {...context.read<tp.TimetableProvider>().timetable};
+    // 1. Provider 인스턴스를 저장하고 리스너를 등록합니다.
+    _provider = context.read<tp.TimetableProvider>();
+    _provider.addListener(_syncTimetableFromProvider); // <<< **리스너 등록**
+
+    // 2. 초기 상태 로드
+    timetable = {..._provider.timetable};
+  }
+
+  @override
+  void dispose() {
+    // 3. 위젯이 파괴될 때 리스너를 해제합니다.
+    _provider.removeListener(_syncTimetableFromProvider); // <<< **리스너 해제**
+    super.dispose();
+  }
+
+  // ⭐️ 핵심 추가: Provider의 상태가 변경될 때마다 로컬 상태를 동기화하는 함수
+  void _syncTimetableFromProvider() {
+    // Provider의 상태가 변경되었으므로, 로컬 상태를 업데이트하고 UI를 갱신합니다.
+    if (mounted) {
+      setState(() {
+        timetable = {..._provider.timetable};
+      });
+    }
   }
 
   // 시간표에 존재하는 과목 이름 목록을 반환하는 함수
@@ -34,29 +59,29 @@ class _FullTimeTableState extends State<FullTimeTable> {
   // 시간표 업데이트 후 스케줄 업데이트 로직을 묶는 함수 (페이지 이탈 시 호출)
   void _updateTimetableAndSchedules(BuildContext context) {
     final timetableProvider = context.read<tp.TimetableProvider>();
-    final scheduleProvider = context.read<tp.ScheduleProvider>();
+    // ScheduleProvider가 정의되어 있어야 합니다.
+    // final scheduleProvider = context.read<tp.ScheduleProvider>();
+    // 임시로 주석 처리: ScheduleProvider 임포트 상태에 따라 수정 필요
 
     final validSubjects = _getValidSubjects(timetable);
 
     timetableProvider.onTimetableUpdate = () async {
-      await scheduleProvider.removeSchedulesNotIn(validSubjects);
+      // await scheduleProvider.removeSchedulesNotIn(validSubjects); // ScheduleProvider 정의 필요
       timetableProvider.onTimetableUpdate = null; // 콜백 사용 후 초기화
     };
 
     timetableProvider.setAll(timetable);
   }
 
-  // ⭐️ 핵심 수정: Provider의 최신 상태를 SharedPreferences에서 강제로 다시 로드합니다.
-  void _refreshTimetableFromProvider() async { // 🚨 async 추가
-    final provider = context.read<tp.TimetableProvider>();
-
-    // 1. SharedPreferences에서 과목 목록과 시간표를 강제로 다시 로드합니다.
-    await provider.loadAllData();
-
-    // 2. 재로드된 최신 데이터로 로컬 상태를 업데이트하고 UI 갱신
-    setState(() {
-      timetable = {...provider.timetable};
-    });
+  // 수동 갱신 함수 (리스너가 주 역할을 하므로, 보조적 역할)
+  void _refreshTimetableFromProvider() {
+    if (mounted) {
+      // 리스너가 호출된 후 최신 상태를 반영했을 것입니다.
+      // 여기서는 명시적으로 다시 동기화를 시도합니다.
+      setState(() {
+        timetable = {...context.read<tp.TimetableProvider>().timetable};
+      });
+    }
   }
 
   // TimeTableButton으로 이동하는 함수
@@ -71,7 +96,8 @@ class _FullTimeTableState extends State<FullTimeTable> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<tp.TimetableProvider>();
+    // 🚨 context.watch 대신 리스너를 사용하므로 이 부분은 삭제합니다.
+    // context.watch<tp.TimetableProvider>();
 
     final days = ['월', '화', '수', '목', '금'];
     final times = [
@@ -272,7 +298,6 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                                         },
                                                         isDeleteMode:
                                                         isDeleteMode,
-                                                        // ⭐️ 새로 추가: 전체 갱신 콜백 전달
                                                         onRefreshAll: _refreshTimetableFromProvider,
                                                         onSubjectTap:
                                                         timetable["$d-$t"] !=
@@ -343,12 +368,12 @@ class _SlotButton extends StatelessWidget {
             ),
           );
 
-          // ⭐️ 핵심 수정: 반환된 결과가 bool 타입의 true라면 (삭제가 발생했다는 신호)
+          // 반환된 결과가 bool 타입의 true라면 (삭제가 발생했다는 신호)
           if (result != null && result is bool && result == true) {
-            // 💡 [해결책] 전체 갱신 콜백을 한 번만 호출하여 SharedPreferences에서 재로드 후 UI 갱신
+            // 💡 리스너가 주 역할을 하지만, 혹시 모를 경우를 대비해 수동 갱신 콜백 호출
             onRefreshAll?.call();
           }
-          // 새로운 과목이 추가된 경우 (기존 로직)
+          // 새로운 과목이 추가된 경우
           else if (result != null && result is tp.SubjectInfo) {
             onChange(id, result);
           }

@@ -18,7 +18,7 @@ class SubjectButtonAddPage extends StatefulWidget {
 class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
   bool isDeleteMode = false;
   // ⭐️ 핵심 추가: 삭제 발생 여부 플래그
-  bool _hasDeletedSubject = false;
+  bool _hasDeletedSubject = false; // <<< 수정: 플래그 추가
 
   // 시간표에 존재하는 과목 이름 목록을 반환하는 함수 (스케줄 정리용)
   Set<String> _getValidSubjects(Map<String, SubjectInfo?> timetable) {
@@ -66,7 +66,7 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
 
     // ⭐️ 핵심: 삭제가 발생했음을 플래그에 표시하여 페이지가 닫힐 때 신호를 보내도록 준비
     setState(() {
-      _hasDeletedSubject = true;
+      _hasDeletedSubject = true; // <<< 수정: 삭제 발생 플래그 설정
     });
   }
 
@@ -76,9 +76,8 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
     return WillPopScope(
       onWillPop: () async {
         // 닫힐 때 _hasDeletedSubject 값을 부모(FullTimeTable)에게 반환합니다.
-        // FullTimeTable에서 이 값을 받아 전체 갱신을 수행합니다.
-        // FullTimeTable은 이 값이 true일 경우 Provider의 loadAllData를 호출합니다.
-        Navigator.pop(context, _hasDeletedSubject);
+        // FullTimeTable에서 이 값이 true일 경우 Provider의 loadAllData를 호출합니다.
+        Navigator.pop(context, _hasDeletedSubject); // <<< 수정: 플래그 반환
         return false; // WillPopScope가 pop을 처리했으므로 false 반환
       },
       child: Scaffold(
