@@ -45,8 +45,6 @@ Color _getRoomColorFromSubjectColor(Color subjectColor) {
 // ==========================================================
 // 💡 AddSubjectModelPage 위젯
 // ==========================================================
-// ✅ 클래스 이름은 Modal 기능의 페이지이므로 AddSubjectModalPage를 그대로 사용하고
-// ✅ 파일명만 AddSubjectModelPage.dart로 처리합니다.
 class AddSubjectModalPage extends StatefulWidget {
   const AddSubjectModalPage({super.key});
 

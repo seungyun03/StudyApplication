@@ -1,8 +1,9 @@
-// 📄 SubjectButtonAddPage.dart (수정본: const 생성자 적용)
+// 📄 SubjectButtonAddPage.dart (영구 저장 및 삭제 기능 추가)
 
 import 'package:flutter/material.dart';
-import '../Providers/TimetableProvider.dart'; // ✅ SubjectInfo import
-import 'AddSubjectModelPage.dart'; // ✅ 올바른 파일명 (Model) import
+import 'package:provider/provider.dart'; // Provider import 추가
+import '../Providers/TimetableProvider.dart'; // TimetableProvider 및 SubjectInfo, ScheduleProvider 포함
+import 'AddSubjectModelPage.dart'; // AddSubjectModelPage import
 
 class SubjectButtonAddPage extends StatefulWidget {
   const SubjectButtonAddPage({super.key});
@@ -12,10 +13,55 @@ class SubjectButtonAddPage extends StatefulWidget {
 }
 
 class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
-  // 사용자가 과목을 선택하거나 새로운 과목을 추가했을 때 호출됩니다.
+  // ⭐️ 추가: 삭제 모드 상태
+  bool isDeleteMode = false;
+
+  // 시간표에 존재하는 과목 이름 목록을 반환하는 함수 (스케줄 정리용)
+  Set<String> _getValidSubjects(Map<String, SubjectInfo?> timetable) {
+    return timetable.values
+        .where((info) => info != null)
+        .map((info) => info!.subject)
+        .toSet();
+  }
+
+  // 과목 선택 함수 (삭제 모드일 때는 선택 비활성화)
   void onSubjectClick(SubjectInfo subject) {
+    if (isDeleteMode) {
+      return;
+    }
     // 선택된 과목 정보를 이전 페이지(FullTimeTable)로 반환합니다.
     Navigator.pop(context, subject);
+  }
+
+  // ✅ 새로운 과목이 추가되면 Provider에 저장 후, 선택된 과목 정보를 반환
+  void onNewSubjectAdded(SubjectInfo newSubject) {
+    // 1. Provider에 과목 정보 저장 (영구 저장 트리거)
+    context.read<TimetableProvider>().addSubject(newSubject);
+
+    // 2. 현재 시간표 슬롯에 반영하기 위해 이전 페이지로 반환
+    Navigator.pop(context, newSubject);
+  }
+
+  // ⭐️ 추가: 삭제 모드 토글
+  void toggleDeleteMode() {
+    setState(() {
+      isDeleteMode = !isDeleteMode;
+    });
+  }
+
+  // ⭐️ 추가: 과목 영구 삭제 실행 (Provider 호출 및 스케줄 정리)
+  void deleteSubject(SubjectInfo subject) {
+    // 1. TimetableProvider에서 과목 영구 삭제 및 시간표 정리
+    context.read<TimetableProvider>().deleteSubject(subject);
+
+    // 2. ScheduleProvider에서 해당 과목 관련 스케줄 정리
+    // 삭제 후 업데이트된 시간표를 가져와 유효한 과목 목록을 추출합니다.
+    final updatedTimetable = context.read<TimetableProvider>().timetable;
+    final validSubjects = _getValidSubjects(updatedTimetable);
+
+    // ScheduleProvider의 cleanup 함수 호출
+    // ScheduleProvider는 TimetableProvider.dart 파일에 정의되어 있으므로 접근 가능
+    context.read<ScheduleProvider>().removeSchedulesNotIn(validSubjects);
   }
 
   @override
@@ -32,9 +78,32 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
                 height: 1024,
                 child: Stack(
                   children: [
-                    // ✅ const 생성자 적용
                     const _TopTitle(),
-                    // 💡 오른쪽 상단에 FullTimeTable 스타일의 뒤로가기 버튼 추가
+                    // ⭐️ 추가: 삭제 모드 토글 버튼
+                    Positioned(
+                      top: 10,
+                      right: 90, // 닫기 버튼과 간격 확보
+                      child: GestureDetector(
+                        onTap: toggleDeleteMode,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            // 삭제 모드 시 버튼 색상/아이콘 변경으로 상태를 명확히 표시
+                            color: isDeleteMode
+                                ? Colors.red.shade100
+                                : const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          child: Icon(Icons.delete_outline,
+                              color: isDeleteMode
+                                  ? Colors.red
+                                  : const Color(0xFF4B5563),
+                              size: 24),
+                        ),
+                      ),
+                    ),
+                    // 기존 닫기 버튼
                     Positioned(
                       top: 10,
                       right: 30,
@@ -54,8 +123,13 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
                         ),
                       ),
                     ),
-                    _SubjectSelectionSection(onSubjectClick: onSubjectClick),
-                    // ✅ const 생성자 적용 (오류 해결)
+                    // ✅ onNewSubjectAdded 콜백 전달 및 삭제 모드/함수 전달
+                    _SubjectSelectionSection(
+                      onSubjectClick: onSubjectClick,
+                      onNewSubjectAdded: onNewSubjectAdded,
+                      isDeleteMode: isDeleteMode,
+                      onSubjectDelete: deleteSubject,
+                    ),
                     const _BottomNavigationBar(),
                   ],
                 ),
@@ -68,11 +142,9 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
   }
 }
 
-// ======================= 상단 제목 위젯 =======================
+// ======================= 상단 제목 위젯 (기존과 동일) =======================
 class _TopTitle extends StatelessWidget {
-  // ✅ const 생성자 추가
   const _TopTitle();
-
   @override
   Widget build(BuildContext context) {
     return Positioned(
@@ -95,24 +167,35 @@ class _TopTitle extends StatelessWidget {
   }
 }
 
-// ======================= 과목 목록 및 추가 버튼 영역 =======================
+// ======================= 과목 목록 및 추가 버튼 영역 (Provider 사용) =======================
 class _SubjectSelectionSection extends StatelessWidget {
   final void Function(SubjectInfo subject) onSubjectClick;
+  final void Function(SubjectInfo subject) onNewSubjectAdded;
+  // ⭐️ 추가: 삭제 모드 상태
+  final bool isDeleteMode;
+  // ⭐️ 추가: 과목 삭제 콜백
+  final void Function(SubjectInfo subject) onSubjectDelete;
 
-  // ✅ const 생성자 추가
-  const _SubjectSelectionSection({super.key, required this.onSubjectClick});
-
-  // 임시 과목 데이터는 삭제되어 빈 리스트입니다.
-  final List<SubjectInfo> _sampleSubjects = const [];
+  const _SubjectSelectionSection({
+    super.key,
+    required this.onSubjectClick,
+    required this.onNewSubjectAdded,
+    required this.isDeleteMode,
+    required this.onSubjectDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Provider를 통해 저장된 과목 목록을 가져옵니다.
+    final List<SubjectInfo> subjects =
+        context.watch<TimetableProvider>().subjectList;
+
     return Positioned(
       top: 120,
       left: 30,
       child: Container(
         width: 1306,
-        height: 800, // 임시 높이
+        height: 800,
         child: Stack(
           children: [
             // --- 과목 목록 (스크롤 가능 영역) ---
@@ -125,18 +208,23 @@ class _SubjectSelectionSection extends StatelessWidget {
                   mainAxisSpacing: 20,
                   childAspectRatio: 206 / 60, // 카드 크기 비율 (너비 206, 높이 60)
                 ),
-                itemCount: _sampleSubjects.length,
+                itemCount: subjects.length, // ✅ 저장된 과목 목록 사용
                 itemBuilder: (context, index) {
-                  final subject = _sampleSubjects[index];
+                  final subject = subjects[index];
                   return _SubjectCard(
                     data: subject,
                     onTap: () => onSubjectClick(subject), // 선택 시 정보 반환
+                    // ⭐️ 추가: 삭제 모드 및 삭제 콜백 전달
+                    isDeleteMode: isDeleteMode,
+                    onDeleteTap: () => onSubjectDelete(subject),
                   );
                 },
               ),
             ),
             // --- ✅ 새로운 과목 추가 버튼 ---
-            _AddSubjectButton(onNewSubjectAdd: onSubjectClick),
+            // ⭐️ 삭제 모드일 때는 '새로운 과목 추가' 버튼을 표시하지 않습니다.
+            if (!isDeleteMode)
+              _AddSubjectButton(onNewSubjectAdd: onNewSubjectAdded),
           ],
         ),
       ),
@@ -144,55 +232,92 @@ class _SubjectSelectionSection extends StatelessWidget {
   }
 }
 
-// ======================= 과목 카드 위젯 =======================
+// ======================= 과목 카드 위젯 (삭제 아이콘 추가) =======================
 class _SubjectCard extends StatelessWidget {
   final SubjectInfo data;
   final VoidCallback onTap;
+  // ⭐️ 추가: 삭제 모드 상태
+  final bool isDeleteMode;
+  // ⭐️ 추가: 삭제 버튼 탭 콜백
+  final VoidCallback onDeleteTap;
 
-  const _SubjectCard({super.key, required this.data, required this.onTap});
+  const _SubjectCard({
+    super.key,
+    required this.data,
+    required this.onTap,
+    required this.isDeleteMode,
+    required this.onDeleteTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 206,
-        height: 60,
-        decoration: BoxDecoration(
-          color: data.bgColor,
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x20000000), offset: Offset(0, 2), blurRadius: 3)
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              data.subject,
-              style: TextStyle(
-                color: data.textColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+      child: Stack( // 삭제 아이콘을 띄우기 위해 Stack 사용
+        children: [
+          // 기존 Container (과목 카드 본체)
+          Container(
+            width: 206,
+            height: 60,
+            decoration: BoxDecoration(
+              color: data.bgColor,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x20000000), offset: Offset(0, 2), blurRadius: 3)
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  data.subject,
+                  style: TextStyle(
+                    color: data.textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  data.room,
+                  style: TextStyle(
+                    color: data.roomColor,
+                    fontSize: 13.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ⭐️ 추가: 삭제 모드일 때만 삭제 아이콘 표시
+          if (isDeleteMode)
+            Positioned(
+              top: -6,
+              right: -6,
+              child: GestureDetector(
+                onTap: onDeleteTap, // 삭제 로직 실행
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white, width: 2), // 흰색 테두리
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
               ),
             ),
-            Text(
-              data.room,
-              style: TextStyle(
-                color: data.roomColor,
-                fontSize: 13.5,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-
-// ======================= 새로운 과목 추가 버튼 =======================
+// ======================= 새로운 과목 추가 버튼 (콜백 수정) =======================
 class _AddSubjectButton extends StatelessWidget {
   final void Function(SubjectInfo subject) onNewSubjectAdd;
 
@@ -208,7 +333,6 @@ class _AddSubjectButton extends StatelessWidget {
         alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () async {
-            // ✅ AddSubjectModalPage 위젯을 호출합니다.
             final newSubject = await showDialog<SubjectInfo>(
               context: context,
               barrierDismissible: false,
@@ -218,6 +342,7 @@ class _AddSubjectButton extends StatelessWidget {
               },
             );
 
+            // ✅ 새로운 과목이 추가되면 콜백을 호출하여 Provider에 저장 후 반환
             if (newSubject != null && newSubject is SubjectInfo) {
               onNewSubjectAdd(newSubject);
             }
@@ -262,7 +387,6 @@ class _AddSubjectButton extends StatelessWidget {
 
 // ======================= 하단 네비게이션 바 위젯 (기존 코드 유지) =======================
 class _BottomNavigationBar extends StatelessWidget {
-  // ✅ const 생성자 추가 (오류 해결)
   const _BottomNavigationBar();
 
   @override

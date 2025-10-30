@@ -43,7 +43,7 @@ class SubjectInfo extends ChangeNotifier {
     );
   }
 
-  // 두 SubjectInfo 객체가 동일한 과목을 나타내는지 확인
+  // 두 SubjectInfo 객체가 동일한 과목을 나타내는지 확인 (과목 이름 기반)
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -59,23 +59,106 @@ class SubjectInfo extends ChangeNotifier {
 /// ---------------------------
 class TimetableProvider extends ChangeNotifier {
   static const String _timetableKey = 'full_timetable_data';
+  // ✅ [추가] 영구 저장될 과목 목록의 키
+  static const String _subjectListKey = 'all_subjects_data';
+
   Map<String, SubjectInfo?> _timetable = {};
+  // ✅ [추가] 영구 저장될 과목 목록
+  List<SubjectInfo> _subjectList = [];
   bool _isTimetableLoading = true;
 
   Future<void> Function()? onTimetableUpdate; // EditingPageParents에서 설정할 예정
 
   Map<String, SubjectInfo?> get timetable => _timetable;
   bool get isTimetableLoading => _isTimetableLoading;
+  // ✅ [추가] subjectList getter 정의
+  List<SubjectInfo> get subjectList => _subjectList;
 
   TimetableProvider() {
-    loadTimetable(); // Provider 생성 시 시간표 로드 시작
+    // 💡 수정: loadTimetable 대신 loadAllData 호출
+    loadAllData(); // Provider 생성 시 시간표 로드 시작
   }
 
-  /// ✅ 시간표 로드
-  Future<void> loadTimetable() async {
+  // ✅ [추가] 모든 데이터 로드 (SubjectList와 Timetable)
+  Future<void> loadAllData() async {
     _isTimetableLoading = true;
     notifyListeners();
 
+    await Future.wait([
+      loadSubjectList(),
+      loadTimetable(),
+    ]);
+
+    _isTimetableLoading = false;
+    notifyListeners();
+  }
+
+  /// ✅ [추가] 과목 목록 로드
+  Future<void> loadSubjectList() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString(_subjectListKey);
+
+    if (jsonString != null) {
+      try {
+        final List<dynamic> decodedList = jsonDecode(jsonString);
+        _subjectList = decodedList
+            .map((item) => SubjectInfo.fromJson(item as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        _subjectList = [];
+      }
+    } else {
+      _subjectList = [];
+    }
+  }
+
+  /// ✅ [추가] 과목 목록 저장
+  Future<void> saveSubjectList() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<Map<String, dynamic>> jsonToEncode =
+    _subjectList.map((info) => info.toJson()).toList();
+    final String jsonString = jsonEncode(jsonToEncode);
+    await prefs.setString(_subjectListKey, jsonString);
+  }
+
+  /// ✅ [추가] 과목 영구 추가 (subjectList에서 사용)
+  void addSubject(SubjectInfo newSubject) async {
+    // 중복 방지 (SubjectInfo의 == 연산자 사용)
+    if (!_subjectList.contains(newSubject)) {
+      _subjectList.add(newSubject);
+      await saveSubjectList(); // 과목 목록 저장
+      notifyListeners();
+    }
+  }
+
+  /// ✅ [추가] 과목 영구 삭제 (subjectList에서 사용)
+  void deleteSubject(SubjectInfo subjectToDelete) async {
+    // 1. 과목 목록에서 제거
+    _subjectList.remove(subjectToDelete);
+
+    // 2. 시간표 슬롯에서 해당 과목을 null로 설정하여 시간표에서 제거
+    final keysToRemove = _timetable.keys.where((key) =>
+    _timetable[key] != null && _timetable[key]!.subject == subjectToDelete.subject).toList();
+
+    for (final key in keysToRemove) {
+      _timetable[key] = null;
+    }
+
+    // 3. 두 데이터 모두 저장
+    await saveSubjectList();
+    await saveTimetable();
+
+    notifyListeners();
+
+    // 💡 시간표 변경 로직 호출 (스케줄 정리 목적)
+    if (onTimetableUpdate != null) {
+      await onTimetableUpdate!();
+    }
+  }
+
+
+  /// ✅ 시간표 로드 (loadAllData에서 호출되도록 수정)
+  Future<void> loadTimetable() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? jsonString = prefs.getString(_timetableKey);
 
@@ -102,9 +185,6 @@ class TimetableProvider extends ChangeNotifier {
     } else {
       _timetable = {}; // 저장된 데이터가 없으면 빈 시간표
     }
-
-    _isTimetableLoading = false;
-    notifyListeners();
   }
 
   /// ✅ 시간표 저장
@@ -142,7 +222,12 @@ class TimetableProvider extends ChangeNotifier {
   /// ✅ 초기화 (저장 로직 추가)
   void clear() async {
     _timetable.clear();
+    // 💡 추가: 시간표 초기화 시 과목 목록도 초기화
+    _subjectList.clear();
+
     await saveTimetable(); // ✨ 변경 시 저장
+    await saveSubjectList(); // ✨ 과목 목록 저장
+
     notifyListeners();
     // 💡 추가: 시간표 초기화 시 스케줄 업데이트 로직 호출
     if (onTimetableUpdate != null) {
