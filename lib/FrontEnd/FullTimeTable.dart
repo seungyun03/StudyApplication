@@ -1,62 +1,66 @@
-// 📄 FullTimeTable.dart (클래스 이름 수정 완료)
+// 📄 FullTimeTable.dart (최종 전체 코드)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/TimetableProvider.dart' as tp;
 import 'SubjectButtonAddPage.dart';
-import 'TimeTablebutton.dart'; // 💡 [추가] TimeTableButton 임포트
+import 'TimeTablebutton.dart';
 
-// 💡 수정: 클래스 이름을 FullTimeTable로 변경하여 homepage.dart의 오류를 해결합니다.
 class FullTimeTable extends StatefulWidget {
   const FullTimeTable({super.key});
 
   @override
-  // 💡 수정: State 클래스 이름도 _FullTimeTableState로 변경합니다.
   State<FullTimeTable> createState() => _FullTimeTableState();
 }
 
 class _FullTimeTableState extends State<FullTimeTable> {
   bool isDeleteMode = false;
-  // 💡 수정: late var를 사용하여 initState에서 provider의 timetable을 복사
   late var timetable = <String, tp.SubjectInfo?>{};
 
   @override
   void initState() {
     super.initState();
-    // 💡 추가: initState에서 현재 시간표를 복사하여 임시 맵으로 사용
     timetable = {...context.read<tp.TimetableProvider>().timetable};
   }
 
   // 시간표에 존재하는 과목 이름 목록을 반환하는 함수
   Set<String> _getValidSubjects(Map<String, tp.SubjectInfo?> timetable) {
-    // SubjectInfo가 null이 아닌 경우만 필터링하여 과목 이름(subject)을 추출
     return timetable.values
         .where((info) => info != null)
         .map((info) => info!.subject)
-        .toSet(); // 중복 제거를 위해 Set으로 반환합니다.
+        .toSet();
   }
 
-  // 💡 수정: 시간표 업데이트 후 스케줄 업데이트 로직을 묶는 함수 (페이지 이탈 시 호출)
+  // 시간표 업데이트 후 스케줄 업데이트 로직을 묶는 함수 (페이지 이탈 시 호출)
   void _updateTimetableAndSchedules(BuildContext context) {
     final timetableProvider = context.read<tp.TimetableProvider>();
     final scheduleProvider = context.read<tp.ScheduleProvider>();
 
-    // 1. 현재 임시 시간표 맵에서 유효한 과목 목록을 추출합니다.
     final validSubjects = _getValidSubjects(timetable);
 
-    // 2. TimetableProvider에 스케줄 업데이트 콜백 함수를 설정합니다.
     timetableProvider.onTimetableUpdate = () async {
       await scheduleProvider.removeSchedulesNotIn(validSubjects);
       timetableProvider.onTimetableUpdate = null; // 콜백 사용 후 초기화
     };
 
-    // 3. 임시 맵을 TimetableProvider에 setAll로 반영하고 저장합니다.
     timetableProvider.setAll(timetable);
   }
 
-  // 💡 [추가] TimeTableButton으로 이동하는 함수
+  // ⭐️ 핵심 수정: Provider의 최신 상태를 SharedPreferences에서 강제로 다시 로드합니다.
+  void _refreshTimetableFromProvider() async { // 🚨 async 추가
+    final provider = context.read<tp.TimetableProvider>();
+
+    // 1. SharedPreferences에서 과목 목록과 시간표를 강제로 다시 로드합니다.
+    await provider.loadAllData();
+
+    // 2. 재로드된 최신 데이터로 로컬 상태를 업데이트하고 UI 갱신
+    setState(() {
+      timetable = {...provider.timetable};
+    });
+  }
+
+  // TimeTableButton으로 이동하는 함수
   void _navigateToTimeTableButton(String subjectName) {
-    // 💡 TimeTableButton으로 이동하며 과목명 전달
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -67,30 +71,18 @@ class _FullTimeTableState extends State<FullTimeTable> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<tp.TimetableProvider>();
+
     final days = ['월', '화', '수', '목', '금'];
     final times = [
-      '9:00',
-      '10:00',
-      '11:00',
-      '12:00',
-      '13:00',
-      '14:00',
-      '15:00',
-      '16:00',
-      '17:00',
-      '18:00',
-      '19:00',
-      '20:00',
-      '21:00',
-      '22:00',
-      '23:00',
+      '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
+      '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
     ];
 
     return WillPopScope(
-      // 💡 추가: 뒤로가기 버튼(하드웨어 또는 시스템)으로 나갈 때도 로직 실행
       onWillPop: () async {
         _updateTimetableAndSchedules(context);
-        return true; // 페이지 팝 허용
+        return true;
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAFB),
@@ -104,17 +96,14 @@ class _FullTimeTableState extends State<FullTimeTable> {
                   height: 1024,
                   child: Stack(
                     children: [
-                      // ✅ 오른쪽 상단 뒤로가기 버튼
                       Positioned(
                         top: 10,
                         right: 30,
                         child: GestureDetector(
                           onTap: () {
-                            // ✅ 최종 업데이트 로직 호출
                             _updateTimetableAndSchedules(context);
                             Navigator.pop(context);
                           },
-                          // ... (Container 및 Icon 코드는 기존과 동일)
                           child: Container(
                             width: 44,
                             height: 44,
@@ -130,7 +119,6 @@ class _FullTimeTableState extends State<FullTimeTable> {
                         ),
                       ),
 
-                      // ... (시간표 영역 시작)
                       Positioned(
                         left: 24,
                         top: 87,
@@ -150,7 +138,6 @@ class _FullTimeTableState extends State<FullTimeTable> {
                           ),
                           child: Stack(
                             children: [
-                              // 상단 헤더 (삭제/삭제 중 버튼 포함) ... (코드 생략) ...
                               Positioned(
                                 top: 0,
                                 left: 0,
@@ -277,16 +264,16 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                                         id: "$d-$t",
                                                         data:
                                                         timetable["$d-$t"],
-                                                        // 💡 수정: onChange 함수를 사용하여 임시 맵만 업데이트하고 화면 갱신
                                                         onChange: (key, value) {
                                                           timetable[key] =
                                                               value;
                                                           setState(
-                                                                  () {}); // 변경사항 즉시 화면 반영
+                                                                  () {});
                                                         },
                                                         isDeleteMode:
                                                         isDeleteMode,
-                                                        // 💡 [추가] 과목 위젯 탭 시 TimeTableButton으로 이동
+                                                        // ⭐️ 새로 추가: 전체 갱신 콜백 전달
+                                                        onRefreshAll: _refreshTimetableFromProvider,
                                                         onSubjectTap:
                                                         timetable["$d-$t"] !=
                                                             null &&
@@ -324,21 +311,22 @@ class _FullTimeTableState extends State<FullTimeTable> {
   }
 }
 
-// ==================== 개별 슬롯 버튼 ====================
+// ==================== 개별 슬롯 버튼 (FullTimeTable.dart 내부에 위치) ====================
 class _SlotButton extends StatelessWidget {
   final String id;
   final tp.SubjectInfo? data;
   final void Function(String, tp.SubjectInfo?) onChange;
   final bool isDeleteMode;
-  // 💡 [추가] 과목 위젯이 눌렸을 때 호출되는 콜백 (과목이 있을 때만 사용)
   final VoidCallback? onSubjectTap;
+  final VoidCallback? onRefreshAll;
 
   const _SlotButton({
     required this.id,
     required this.data,
     required this.onChange,
     required this.isDeleteMode,
-    this.onSubjectTap, // 💡 추가
+    this.onSubjectTap,
+    this.onRefreshAll,
   });
 
   @override
@@ -351,9 +339,17 @@ class _SlotButton extends StatelessWidget {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (_) => const SubjectButtonAddPage()),
+              builder: (_) => const SubjectButtonAddPage(),
+            ),
           );
-          if (result != null && result is tp.SubjectInfo) {
+
+          // ⭐️ 핵심 수정: 반환된 결과가 bool 타입의 true라면 (삭제가 발생했다는 신호)
+          if (result != null && result is bool && result == true) {
+            // 💡 [해결책] 전체 갱신 콜백을 한 번만 호출하여 SharedPreferences에서 재로드 후 UI 갱신
+            onRefreshAll?.call();
+          }
+          // 새로운 과목이 추가된 경우 (기존 로직)
+          else if (result != null && result is tp.SubjectInfo) {
             onChange(id, result);
           }
         },
@@ -373,7 +369,6 @@ class _SlotButton extends StatelessWidget {
     }
 
     return GestureDetector(
-      // 💡 수정: 삭제 모드이면 삭제, 아니면 onSubjectTap 실행
       onTap: isDeleteMode ? () => onChange(id, null) : onSubjectTap,
       child: Stack(
         children: [
