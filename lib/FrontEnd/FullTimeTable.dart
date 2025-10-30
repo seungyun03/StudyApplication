@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/TimetableProvider.dart' as tp;
 import 'SubjectButtonAddPage.dart';
+import 'TimeTablebutton.dart'; // 💡 [추가] TimeTableButton 임포트
 
 // 💡 수정: 클래스 이름을 FullTimeTable로 변경하여 homepage.dart의 오류를 해결합니다.
 class FullTimeTable extends StatefulWidget {
@@ -51,6 +52,17 @@ class _FullTimeTableState extends State<FullTimeTable> {
 
     // 3. 임시 맵을 TimetableProvider에 setAll로 반영하고 저장합니다.
     timetableProvider.setAll(timetable);
+  }
+
+  // 💡 [추가] TimeTableButton으로 이동하는 함수
+  void _navigateToTimeTableButton(String subjectName) {
+    // 💡 TimeTableButton으로 이동하며 과목명 전달
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TimeTableButton(subjectName: subjectName),
+      ),
+    );
   }
 
   @override
@@ -160,7 +172,7 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                         horizontal: 20),
                                     child: Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
                                           "2024년 1학기 시간표",
@@ -184,7 +196,7 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                                   ? Colors.red.shade100
                                                   : const Color(0xFFF3F4F6),
                                               borderRadius:
-                                                  BorderRadius.circular(8),
+                                              BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               isDeleteMode ? "삭제 중" : "삭제",
@@ -250,7 +262,7 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                                         t,
                                                         style: const TextStyle(
                                                           color:
-                                                              Color(0xFF9CA3AF),
+                                                          Color(0xFF9CA3AF),
                                                           fontSize: 13.95,
                                                         ),
                                                       ),
@@ -259,21 +271,31 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                                   for (final d in days)
                                                     Padding(
                                                       padding:
-                                                          const EdgeInsets.only(
-                                                              right: 8.3),
+                                                      const EdgeInsets.only(
+                                                          right: 8.3),
                                                       child: _SlotButton(
                                                         id: "$d-$t",
                                                         data:
-                                                            timetable["$d-$t"],
+                                                        timetable["$d-$t"],
                                                         // 💡 수정: onChange 함수를 사용하여 임시 맵만 업데이트하고 화면 갱신
                                                         onChange: (key, value) {
                                                           timetable[key] =
                                                               value;
                                                           setState(
-                                                              () {}); // 변경사항 즉시 화면 반영
+                                                                  () {}); // 변경사항 즉시 화면 반영
                                                         },
                                                         isDeleteMode:
-                                                            isDeleteMode,
+                                                        isDeleteMode,
+                                                        // 💡 [추가] 과목 위젯 탭 시 TimeTableButton으로 이동
+                                                        onSubjectTap:
+                                                        timetable["$d-$t"] !=
+                                                            null &&
+                                                            !isDeleteMode
+                                                            ? () => _navigateToTimeTableButton(
+                                                            timetable[
+                                                            "$d-$t"]!
+                                                                .subject)
+                                                            : null,
                                                       ),
                                                     ),
                                                 ],
@@ -308,12 +330,15 @@ class _SlotButton extends StatelessWidget {
   final tp.SubjectInfo? data;
   final void Function(String, tp.SubjectInfo?) onChange;
   final bool isDeleteMode;
+  // 💡 [추가] 과목 위젯이 눌렸을 때 호출되는 콜백 (과목이 있을 때만 사용)
+  final VoidCallback? onSubjectTap;
 
   const _SlotButton({
     required this.id,
     required this.data,
     required this.onChange,
     required this.isDeleteMode,
+    this.onSubjectTap, // 💡 추가
   });
 
   @override
@@ -323,15 +348,15 @@ class _SlotButton extends StatelessWidget {
         onTap: isDeleteMode
             ? null
             : () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const SubjectButtonAddPage()),
-                );
-                if (result != null && result is tp.SubjectInfo) {
-                  onChange(id, result);
-                }
-              },
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const SubjectButtonAddPage()),
+          );
+          if (result != null && result is tp.SubjectInfo) {
+            onChange(id, result);
+          }
+        },
         child: Container(
           width: 206,
           height: 60,
@@ -348,7 +373,8 @@ class _SlotButton extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap: isDeleteMode ? () => onChange(id, null) : null,
+      // 💡 수정: 삭제 모드이면 삭제, 아니면 onSubjectTap 실행
+      onTap: isDeleteMode ? () => onChange(id, null) : onSubjectTap,
       child: Stack(
         children: [
           Container(
