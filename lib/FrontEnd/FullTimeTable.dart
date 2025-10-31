@@ -1,4 +1,4 @@
-// 📄 FullTimeTable.dart (최종 수정 전체 코드)
+// 📄 FullTimeTable.dart (최종 수정 전체 코드 - '삭제' 기능 및 버튼 완전 제거)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +14,7 @@ class FullTimeTable extends StatefulWidget {
 }
 
 class _FullTimeTableState extends State<FullTimeTable> {
-  bool isDeleteMode = false;
+  // ❌ isDeleteMode 변수 제거
   late var timetable = <String, tp.SubjectInfo?>{};
 
   // ⭐️ 핵심 추가: Provider 인스턴스를 저장할 변수
@@ -195,6 +195,8 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                             color: Color(0xFF1F2937),
                                           ),
                                         ),
+                                        // ❌ 삭제: '삭제' 버튼 (GestureDetector) 제거
+                                        /*
                                         GestureDetector(
                                           onTap: () {
                                             setState(() {
@@ -222,6 +224,7 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                             ),
                                           ),
                                         ),
+                                        */
                                       ],
                                     ),
                                   ),
@@ -296,13 +299,12 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                                           setState(
                                                                   () {});
                                                         },
-                                                        isDeleteMode:
-                                                        isDeleteMode,
+                                                        // ❌ isDeleteMode 전달 제거
                                                         onRefreshAll: _refreshTimetableFromProvider,
+                                                        // ❌ isDeleteMode 검사 제거
                                                         onSubjectTap:
                                                         timetable["$d-$t"] !=
-                                                            null &&
-                                                            !isDeleteMode
+                                                            null
                                                             ? () => _navigateToTimeTableButton(
                                                             timetable[
                                                             "$d-$t"]!
@@ -341,7 +343,7 @@ class _SlotButton extends StatelessWidget {
   final String id;
   final tp.SubjectInfo? data;
   final void Function(String, tp.SubjectInfo?) onChange;
-  final bool isDeleteMode;
+  // ❌ final bool isDeleteMode; 제거
   final VoidCallback? onSubjectTap;
   final VoidCallback? onRefreshAll;
 
@@ -349,7 +351,7 @@ class _SlotButton extends StatelessWidget {
     required this.id,
     required this.data,
     required this.onChange,
-    required this.isDeleteMode,
+    // ❌ required this.isDeleteMode, 제거
     this.onSubjectTap,
     this.onRefreshAll,
   });
@@ -358,26 +360,8 @@ class _SlotButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (data == null) {
       return GestureDetector(
-        onTap: isDeleteMode
-            ? null
-            : () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const SubjectButtonAddPage(),
-            ),
-          );
-
-          // 반환된 결과가 bool 타입의 true라면 (삭제가 발생했다는 신호)
-          if (result != null && result is bool && result == true) {
-            // 💡 리스너가 주 역할을 하지만, 혹시 모를 경우를 대비해 수동 갱신 콜백 호출
-            onRefreshAll?.call();
-          }
-          // 새로운 과목이 추가된 경우
-          else if (result != null && result is tp.SubjectInfo) {
-            onChange(id, result);
-          }
-        },
+        // 빈 슬롯은 탭 동작 없음 (기능 완전 제거)
+        onTap: null,
         child: Container(
           width: 206,
           height: 60,
@@ -387,14 +371,17 @@ class _SlotButton extends StatelessWidget {
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
           child: const Center(
-            child: Icon(Icons.add, color: Color(0xFF4B5563), size: 22),
+            // '+' 아이콘 제거
+            child: SizedBox.shrink(),
           ),
         ),
       );
     }
 
+    // 과목이 있는 슬롯: 탭 시 무조건 onSubjectTap 실행 (삭제 모드 로직 제거)
     return GestureDetector(
-      onTap: isDeleteMode ? () => onChange(id, null) : onSubjectTap,
+      // 🚨 핵심 수정: isDeleteMode 조건부 제거, 무조건 onSubjectTap으로 연결
+      onTap: onSubjectTap,
       child: Stack(
         children: [
           Container(
@@ -430,6 +417,8 @@ class _SlotButton extends StatelessWidget {
               ],
             ),
           ),
+          // ❌ 삭제 모드일 때 표시되던 '삭제' 텍스트 제거
+          /*
           if (isDeleteMode)
             const Positioned(
               right: 8,
@@ -443,6 +432,7 @@ class _SlotButton extends StatelessWidget {
                 ),
               ),
             ),
+          */
         ],
       ),
     );
