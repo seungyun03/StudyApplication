@@ -13,7 +13,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.5.3
-  file_picker: ^10.3.3
+  file_picker: ^6.1.1
   open_filex: ^4.7.0
 
   provider: ^6.1.5 # ✅ 들여쓰기 한 단계 줄임 (flutter 블록 밖으로 이동)
@@ -22,7 +22,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: 5.0.0
 
 flutter:
   uses-material-design: true

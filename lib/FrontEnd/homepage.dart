@@ -11,6 +11,8 @@ import 'package:study_app/FrontEnd/FullTimeTable.dart' as ft;
 
 import 'package:study_app/FrontEnd/TimeTablebutton.dart';
 import '../Providers/TimetableProvider.dart' as tp;
+// 💡 [추가] 설정 페이지로 이동하기 위한 import 및 alias
+import 'package:study_app/FrontEnd/Settings/SettingsPage.dart' as sp;
 
 // 💡 [추가 시작] ISO weekday를 한국어 요일로 변환하는 헬퍼 함수
 String _getKoreanDay(int weekday) {
@@ -1043,12 +1045,42 @@ class BottomNavigationBarWidget extends StatelessWidget {
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
-      child: const Row(
+      child: Row(
+        // 💡 const 제거 (동적인 onTap 핸들러를 사용하기 위해)
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _NavItem(icon: Icons.forum_outlined, label: "커뮤니티", active: false),
-          _NavItem(icon: Icons.home, label: "홈", active: true),
-          _NavItem(icon: Icons.settings_outlined, label: "설정", active: false),
+          // 커뮤니티
+          _NavItem(
+            icon: Icons.forum_outlined,
+            label: "커뮤니티",
+            active: false,
+            onTap: () {
+              /* Navigator.push(context, MaterialPageRoute(builder: (_) => const CommunityPage())); */
+            },
+          ),
+          // 홈
+          _NavItem(
+            icon: Icons.home,
+            label: "홈",
+            active: true,
+            onTap: () {
+              // 현재 페이지이므로 아무것도 하지 않음.
+            },
+          ),
+          // 설정 - [수정] settings_page.dart로 이동하는 기능 추가
+          _NavItem(
+            icon: Icons.settings_outlined,
+            label: "설정",
+            active: false,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const sp.SettingsPage()), // 💡 sp.SettingsPage로 이동
+              );
+            },
+          ),
         ],
       ),
     );
@@ -1059,30 +1091,36 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
+  final VoidCallback? onTap; // 💡 [추가] 탭 이벤트 핸들러
 
   const _NavItem({
     required this.icon,
     required this.label,
     required this.active,
+    this.onTap, // 💡 [추가] 초기화
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: active ? Colors.blue : Colors.grey, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 13.8,
-            color: active ? Colors.blue : Colors.grey,
-            fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+    return InkWell(
+      // 💡 [수정] 탭 가능하도록 InkWell로 감싸기
+      onTap: onTap, // 💡 [추가] onTap 핸들러 연결
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: active ? Colors.blue : Colors.grey, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 13.8,
+              color: active ? Colors.blue : Colors.grey,
+              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

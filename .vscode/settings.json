@@ -5,5 +5,14 @@
       "envManager": "ms-python.python:system",
       "packageManager": "ms-python.python:pip"
     }
-  ]
+  ],
+  // === Git Bash 설정 시작 ===
+  "terminal.integrated.profiles.windows": {
+    "GitBash": {
+      // D:\Git\bin\bash.exe 경로를 사용합니다.
+      "path": "D:\\Git\\bin\\bash.exe"
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "GitBash"
+  // === Git Bash 설정 끝 ===
 }
