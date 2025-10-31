@@ -1,4 +1,4 @@
-// 📄 EditingPageParents.dart (수정 완료 버전)
+// 📄 EditingPageParents.dart (로그 추가 최종 전체 코드)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,15 +14,12 @@ class EditingPageParents extends StatefulWidget {
 
 class _EditingPageParentsState extends State<EditingPageParents> {
   bool isDeleteMode = false;
-  // 💡 수정: late var를 사용하여 initState에서 provider의 timetable을 복사
   late var timetable = <String, tp.SubjectInfo?>{};
 
   @override
   void initState() {
     super.initState();
-    // 💡 추가: initState에서 현재 시간표를 복사하여 임시 맵으로 사용
-    // BuildContext가 안전하게 사용될 수 있도록 Future.microtask으로 감싸는 것이 더 안전할 수 있습니다.
-    // 여기서는 간단하게 initState 내에서 read합니다.
+    // 💡 초기 상태: initState에서 현재 시간표를 복사하여 임시 맵으로 사용
     timetable = {...context.read<tp.TimetableProvider>().timetable};
   }
 
@@ -35,9 +32,8 @@ class _EditingPageParentsState extends State<EditingPageParents> {
         .toSet(); // 중복 제거를 위해 Set으로 반환합니다.
   }
 
-  // 💡 수정: 시간표 업데이트 후 스케줄 업데이트 로직을 묶는 함수 (페이지 이탈 시 호출)
+  // 시간표 업데이트 후 스케줄 업데이트 로직을 묶는 함수 (페이지 이탈 시 호출)
   void _updateTimetableAndSchedules(BuildContext context) {
-    // 💡 수정 시작: ScheduleProvider를 read만 합니다.
     final timetableProvider = context.read<tp.TimetableProvider>();
     final scheduleProvider = context.read<tp.ScheduleProvider>();
 
@@ -45,24 +41,17 @@ class _EditingPageParentsState extends State<EditingPageParents> {
     final validSubjects = _getValidSubjects(timetable);
 
     // 2. TimetableProvider에 스케줄 업데이트 콜백 함수를 설정합니다.
-    //    콜백이 실행될 때 scheduleProvider를 통해 스케줄 데이터를 정리합니다.
     timetableProvider.onTimetableUpdate = () async {
-      // setAll 내부에서 호출되며, 이 함수가 유효 과목 목록에 없는 시험/과제 데이터만 삭제합니다.
       await scheduleProvider.removeSchedulesNotIn(validSubjects);
       timetableProvider.onTimetableUpdate = null; // 콜백 사용 후 초기화
     };
 
     // 3. 임시 맵을 TimetableProvider에 setAll로 반영하고 저장합니다.
-    //    이때 TimetableProvider.setAll 내부에서 onTimetableUpdate 콜백이 실행됩니다.
     timetableProvider.setAll(timetable);
-    // 💡 수정 끝
   }
 
   @override
   Widget build(BuildContext context) {
-    // build 함수에서는 timetableProvider를 watch하지 않습니다. (임시 맵 timetable 사용)
-    // final provider = context.read<tp.TimetableProvider>(); // ❌ 사용 안함
-
     final days = ['월', '화', '수', '목', '금'];
     final times = [
       '9:00',
@@ -83,7 +72,6 @@ class _EditingPageParentsState extends State<EditingPageParents> {
     ];
 
     return WillPopScope(
-      // 💡 추가: 뒤로가기 버튼(하드웨어 또는 시스템)으로 나갈 때도 로직 실행
       onWillPop: () async {
         _updateTimetableAndSchedules(context);
         return true; // 페이지 팝 허용
@@ -110,7 +98,6 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                             _updateTimetableAndSchedules(context);
                             Navigator.pop(context);
                           },
-                          // ... (Container 및 Icon 코드는 기존과 동일)
                           child: Container(
                             width: 44,
                             height: 44,
@@ -119,7 +106,6 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Center(
-                              // 💡 수정 완료: Icons.arrow_forward_ios_rounded -> Icons.arrow_back_ios_rounded
                               child: Icon(Icons.arrow_back_ios_rounded,
                                   size: 20, color: Color(0xFF4B5563)),
                             ),
@@ -169,7 +155,7 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                                         horizontal: 20),
                                     child: Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
                                           "2024년 1학기 시간표",
@@ -193,7 +179,7 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                                                   ? Colors.red.shade100
                                                   : const Color(0xFFF3F4F6),
                                               borderRadius:
-                                                  BorderRadius.circular(8),
+                                              BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               isDeleteMode ? "삭제 중" : "삭제",
@@ -259,7 +245,7 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                                                         t,
                                                         style: const TextStyle(
                                                           color:
-                                                              Color(0xFF9CA3AF),
+                                                          Color(0xFF9CA3AF),
                                                           fontSize: 13.95,
                                                         ),
                                                       ),
@@ -268,22 +254,29 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                                                   for (final d in days)
                                                     Padding(
                                                       padding:
-                                                          const EdgeInsets.only(
-                                                              right: 8.3),
+                                                      const EdgeInsets.only(
+                                                          right: 8.3),
                                                       child: _SlotButton(
                                                         id: "$d-$t",
                                                         data:
-                                                            timetable["$d-$t"],
-                                                        // 💡 수정: onChange 함수를 사용하여 임시 맵만 업데이트하고 화면 갱신
+                                                        timetable["$d-$t"],
+                                                        // ⭐️ 핵심 수정 1: 전체 갱신 신호 처리 로직 추가
                                                         onChange: (key, value) {
-                                                          timetable[key] =
-                                                              value;
-                                                          // 💡 핵심 수정: 개별 삭제 시 provider.update 호출 제거
-                                                          setState(
-                                                              () {}); // 변경사항 즉시 화면 반영
+                                                          if (key == "REFRESH_ALL") {
+                                                            // ⭐️ 로그 추가: REFRESH_ALL 신호 수신 확인
+                                                            print("✅ [DEL_SIGNAL] REFRESH_ALL received. Syncing local timetable.");
+
+                                                            // 'REFRESH_ALL' 신호가 오면, Provider의 최신 맵으로 로컬 맵을 동기화합니다.
+                                                            timetable = {...context.read<tp.TimetableProvider>().timetable};
+                                                          } else {
+                                                            // 단일 슬롯 업데이트인 경우 (기존 로직)
+                                                            timetable[key] = value;
+                                                          }
+                                                          // 변경사항 즉시 화면 반영 (setState)
+                                                          setState(() {});
                                                         },
                                                         isDeleteMode:
-                                                            isDeleteMode,
+                                                        isDeleteMode,
                                                       ),
                                                     ),
                                                 ],
@@ -333,15 +326,31 @@ class _SlotButton extends StatelessWidget {
         onTap: isDeleteMode
             ? null
             : () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const SubjectButtonAddPage()),
-                );
-                if (result != null && result is tp.SubjectInfo) {
-                  onChange(id, result);
-                }
-              },
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const SubjectButtonAddPage()),
+          );
+
+          // ⭐️ 핵심 수정 2: SubjectButtonAddPage의 반환 값을 처리합니다.
+          if (result != null) {
+            if (result is tp.SubjectInfo) {
+              // 1. 새 과목이 선택된 경우 (SubjectInfo 반환)
+              onChange(id, result);
+            } else if (result is bool && result == true) {
+              // 2. 과목 영구 삭제가 발생한 경우 (true 반환)
+
+              // 💡 핵심 추가: Provider의 상태를 저장소에서 강제로 다시 로드하여 최신 상태 보장
+              await context.read<tp.TimetableProvider>().loadAllData();
+
+              // ⭐️ 로그 추가: REFRESH_ALL 신호 전달 직전
+              print("✅ [DEL_SIGNAL] Subject deletion detected. Sending REFRESH_ALL.");
+
+              // 상위 위젯(_EditingPageParentsState)에 전체 갱신을 요청하는 특별한 키를 전달합니다.
+              onChange("REFRESH_ALL", null);
+            }
+          }
+        },
         child: Container(
           width: 206,
           height: 60,

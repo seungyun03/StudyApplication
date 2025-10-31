@@ -1,4 +1,4 @@
-// 📄 SubjectButtonAddPage.dart (최종 전체 코드)
+// 📄 SubjectButtonAddPage.dart (최종 수정 전체 코드 - 닫기 버튼 반환 값 수정)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +18,7 @@ class SubjectButtonAddPage extends StatefulWidget {
 class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
   bool isDeleteMode = false;
   // ⭐️ 핵심 추가: 삭제 발생 여부 플래그
-  bool _hasDeletedSubject = false; // <<< 수정: 플래그 추가
+  bool _hasDeletedSubject = false; // <<< 플래그 유지
 
   // 시간표에 존재하는 과목 이름 목록을 반환하는 함수 (스케줄 정리용)
   Set<String> _getValidSubjects(Map<String, SubjectInfo?> timetable) {
@@ -60,13 +60,11 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
     final updatedTimetable = context.read<TimetableProvider>().timetable;
     final validSubjects = _getValidSubjects(updatedTimetable);
     // 스케줄 정리 로직을 별도로 호출하여 Provider가 재로드된 이후에 실행되도록 보장합니다.
-    // (TimetableProvider.deleteSubject 내부에서 onTimetableUpdate가 호출되므로,
-    // 이 로직은 불필요할 수 있으나, 안전을 위해 남겨둡니다.)
     await context.read<ScheduleProvider>().removeSchedulesNotIn(validSubjects);
 
     // ⭐️ 핵심: 삭제가 발생했음을 플래그에 표시하여 페이지가 닫힐 때 신호를 보내도록 준비
     setState(() {
-      _hasDeletedSubject = true; // <<< 수정: 삭제 발생 플래그 설정
+      _hasDeletedSubject = true; // <<< 삭제 발생 플래그 설정
     });
   }
 
@@ -75,9 +73,8 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // 닫힐 때 _hasDeletedSubject 값을 부모(FullTimeTable)에게 반환합니다.
-        // FullTimeTable에서 이 값이 true일 경우 Provider의 loadAllData를 호출합니다.
-        Navigator.pop(context, _hasDeletedSubject); // <<< 수정: 플래그 반환
+        // 닫힐 때 _hasDeletedSubject 값을 부모에게 반환합니다.
+        Navigator.pop(context, _hasDeletedSubject);
         return false; // WillPopScope가 pop을 처리했으므로 false 반환
       },
       child: Scaffold(
@@ -122,8 +119,8 @@ class _SubjectButtonAddPageState extends State<SubjectButtonAddPage> {
                         right: 30,
                         child: GestureDetector(
                           onTap: () {
-                            // ⭐️ 수정: WillPopScope를 실행하도록 Navigator.pop을 사용
-                            Navigator.pop(context);
+                            // ⭐️⭐️ 핵심 수정: 닫기 버튼을 누를 때도 플래그 값을 반환하도록 수정
+                            Navigator.pop(context, _hasDeletedSubject);
                           },
                           child: Container(
                             width: 44,
