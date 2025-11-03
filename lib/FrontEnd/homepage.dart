@@ -13,6 +13,9 @@ import 'package:study_app/FrontEnd/TimeTablebutton.dart';
 import '../Providers/TimetableProvider.dart' as tp;
 // 💡 [추가] 설정 페이지로 이동하기 위한 import 및 alias
 import 'package:study_app/FrontEnd/Settings/SettingsPage.dart' as sp;
+// 🚨 [추가] TimeTableSelectionPage로 이동하기 위한 import
+import 'TimeTableSelectionPage.dart';
+
 
 // 💡 [추가 시작] ISO weekday를 한국어 요일로 변환하는 헬퍼 함수
 String _getKoreanDay(int weekday) {
@@ -135,35 +138,45 @@ class _HeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "시간표",
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: Color(0xFF1F2937),
+    // 💡 수정: Row 전체를 GestureDetector로 감싸서 탭 이벤트를 처리합니다.
+    return GestureDetector(
+      onTap: () {
+        // 🚨 핵심 수정: TimeTableSelectionPage로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TimeTableSelectionPage()),
+        );
+      },
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "시간표",
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: Color(0xFF1F2937),
+                ),
               ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              "2024년 1학기",
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontWeight: FontWeight.normal,
-                fontSize: 15.8,
-                color: Color(0xFF6B7280),
+              SizedBox(height: 6),
+              Text(
+                "2024년 1학기",
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.normal,
+                  fontSize: 15.8,
+                  color: Color(0xFF6B7280),
+                ),
               ),
-            ),
-          ],
-        ),
-        Icon(Icons.chevron_right, color: Colors.grey, size: 28),
-      ],
+            ],
+          ),
+          Icon(Icons.chevron_right, color: Colors.grey, size: 28),
+        ],
+      ),
     );
   }
 }
@@ -261,15 +274,15 @@ class ExamScheduleWidget extends StatelessWidget {
     final now = DateTime.now();
     final upcomingExams = exams
         .where((exam) {
-          final examDateStr = exam['examDate'] as String?;
-          if (examDateStr == null || examDateStr.isEmpty) return false;
+      final examDateStr = exam['examDate'] as String?;
+      if (examDateStr == null || examDateStr.isEmpty) return false;
 
-          // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-          final examDate = DateTime.tryParse(examDateStr.replaceAll(' ', 'T'));
+      // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
+      final examDate = DateTime.tryParse(examDateStr.replaceAll(' ', 'T'));
 
-          // 오늘 날짜 포함 및 미래 시험만 표시 (종료되지 않은 항목)
-          return examDate != null && !examDate.isBefore(now);
-        })
+      // 오늘 날짜 포함 및 미래 시험만 표시 (종료되지 않은 항목)
+      return examDate != null && !examDate.isBefore(now);
+    })
         .take(3) // 💡 시험 항목도 3개까지만 표시
         .toList();
 
@@ -305,20 +318,20 @@ class AssignmentScheduleWidget extends StatelessWidget {
     final now = DateTime.now();
     final pendingAssignments = assignments
         .where((a) {
-          final isSubmitted = (a['submitted'] ?? false) == true;
-          if (isSubmitted) return false; // 제출 완료 항목은 제외
+      final isSubmitted = (a['submitted'] ?? false) == true;
+      if (isSubmitted) return false; // 제출 완료 항목은 제외
 
-          final dueDateStr = a['dueDate'] as String?;
-          if (dueDateStr == null || dueDateStr.isEmpty) return false;
+      final dueDateStr = a['dueDate'] as String?;
+      if (dueDateStr == null || dueDateStr.isEmpty) return false;
 
-          // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-          final dueDate = DateTime.tryParse(dueDateStr.replaceAll(' ', 'T'));
+      // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
+      final dueDate = DateTime.tryParse(dueDateStr.replaceAll(' ', 'T'));
 
-          // D+ 표시를 위해 기한이 지난 과제도 필터링하지 않고, D-Day 계산 함수에 맡깁니다.
-          // 하지만 homepage에서는 *남은* 항목을 보여주는 것이 목적이므로, 과거는 제외합니다.
-          // 💡 수정:dueDate가 null이 아니고, 마감일이 현재 시간보다 이후인 경우만 필터링하여 '다가오는' 과제만 표시
-          return dueDate != null && !dueDate.isBefore(now);
-        })
+      // D+ 표시를 위해 기한이 지난 과제도 필터링하지 않고, D-Day 계산 함수에 맡깁니다.
+      // 하지만 homepage에서는 *남은* 항목을 보여주는 것이 목적이므로, 과거는 제외합니다.
+      // 💡 수정:dueDate가 null이 아니고, 마감일이 현재 시간보다 이후인 경우만 필터링하여 '다가오는' 과제만 표시
+      return dueDate != null && !dueDate.isBefore(now);
+    })
         .take(3)
         .toList();
 
@@ -362,7 +375,7 @@ class _CardWrapper extends StatelessWidget {
     try {
       // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
       final DateTime targetDateTime =
-          DateTime.parse(dateString.replaceAll(' ', 'T'));
+      DateTime.parse(dateString.replaceAll(' ', 'T'));
       final DateTime now = DateTime.now();
 
       // 시험 (isExam)이면서 이미 시간이 지난 경우
@@ -400,11 +413,11 @@ class _CardWrapper extends StatelessWidget {
     // 💡 수정: TimeTableButton.dart에서 subjectName이 저장되었다고 가정
     final String subjectName = item['subjectName'] as String? ?? '과목 정보 없음';
     final String titleText =
-        isExam ? (item['examName'] ?? '제목 없음') : (item['title'] ?? '제목 없음');
+    isExam ? (item['examName'] ?? '제목 없음') : (item['title'] ?? '제목 없음');
 
     // 'YYYY-MM-DD HH:mm' 형식의 날짜/시간 문자열
     final String dateString =
-        isExam ? (item['examDate'] ?? '') : (item['dueDate'] ?? '');
+    isExam ? (item['examDate'] ?? '') : (item['dueDate'] ?? '');
 
     // 💡 추가: D-Day 계산
     final String dDayString = _getDDayString(dateString, isExam: isExam);
@@ -436,10 +449,10 @@ class _CardWrapper extends StatelessWidget {
     // 💡 D-Day 색상 결정
     final Color rightTextColor = dDayString.isNotEmpty
         ? (dDayString == 'D-Day'
-            ? Colors.red.shade600 // D-Day는 빨간색
-            : (dDayString.startsWith('D+')
-                ? Colors.orange.shade600 // D+는 주황색 (지연된 과제)
-                : const Color(0xFF1F2937))) // D-N은 일반 텍스트 색상
+        ? Colors.red.shade600 // D-Day는 빨간색
+        : (dDayString.startsWith('D+')
+        ? Colors.orange.shade600 // D+는 주황색 (지연된 과제)
+        : const Color(0xFF1F2937))) // D-N은 일반 텍스트 색상
         : const Color(0xFF1F2937); // 날짜/시간은 일반 텍스트 색상
 
     // 💡 수정 시작: 과목명 및 시험 장소 정보 추출 및 표시 방식 결정
@@ -471,7 +484,7 @@ class _CardWrapper extends StatelessWidget {
           children: [
             Icon(isExam ? Icons.event_note : Icons.assignment,
                 color:
-                    isExam ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+                isExam ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
                 size: 16),
             const SizedBox(width: 8),
             Expanded(
@@ -534,7 +547,7 @@ class _CardWrapper extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: gradient),
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -558,35 +571,35 @@ class _CardWrapper extends StatelessWidget {
           Expanded(
             child: isLoading
                 ? Center(
-                    child: CircularProgressIndicator(
-                        color: gradient.first)) // 로딩 중 표시
+                child: CircularProgressIndicator(
+                    color: gradient.first)) // 로딩 중 표시
                 : items.isEmpty
-                    ? Center(
-                        // 항목이 없을 경우 빈 텍스트 표시
-                        child: Text(
-                          emptyText,
-                          style: TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: 14,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      )
-                    : // 💡 수정: 항목이 있을 경우 ListView.builder로 변경 (RenderFlex Overflow 방지)
-                    ListView.builder(
-                        // padding을 ListView에 적용
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 4.0, horizontal: 16.0),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          // 💡 ListView 내에서 아이템 하나씩 빌드
-                          return _buildItemRow(
-                            items[index],
-                            title == "시험",
-                            index,
-                          );
-                        },
-                      ),
+                ? Center(
+              // 항목이 없을 경우 빈 텍스트 표시
+              child: Text(
+                emptyText,
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 14,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            )
+                : // 💡 수정: 항목이 있을 경우 ListView.builder로 변경 (RenderFlex Overflow 방지)
+            ListView.builder(
+              // padding을 ListView에 적용
+              padding: const EdgeInsets.symmetric(
+                  vertical: 4.0, horizontal: 16.0),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                // 💡 ListView 내에서 아이템 하나씩 빌드
+                return _buildItemRow(
+                  items[index],
+                  title == "시험",
+                  index,
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -968,7 +981,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                       // 🚨 핵심 수정: ep. prefix 사용
                                       MaterialPageRoute(
                                           builder: (_) =>
-                                              const ep.EditingPageParents()),
+                                          const ep.EditingPageParents()),
                                     );
                                   } else {
                                     // 💡 수정: TimeTableButton에 과목명만 전달하도록 수정
@@ -984,38 +997,38 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                 },
                                 child: Container(
                                   margin:
-                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  const EdgeInsets.symmetric(horizontal: 4),
                                   height: 50,
                                   decoration: BoxDecoration(
                                     color: cellSubject?.bgColor ??
                                         const Color(0xFFF9FAFB),
                                     borderRadius: BorderRadius.circular(20),
                                     border:
-                                        Border.all(color: Colors.grey.shade300),
+                                    Border.all(color: Colors.grey.shade300),
                                   ),
                                   alignment: Alignment.center,
                                   child: cellSubject == null
                                       ? const SizedBox.shrink()
                                       : Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              cellSubject.subject,
-                                              style: TextStyle(
-                                                color: cellSubject.textColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Text(
-                                              cellSubject.room,
-                                              style: TextStyle(
-                                                color: cellSubject.roomColor,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ],
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        cellSubject.subject,
+                                        style: TextStyle(
+                                          color: cellSubject.textColor,
+                                          fontWeight: FontWeight.bold,
                                         ),
+                                      ),
+                                      Text(
+                                        cellSubject.room,
+                                        style: TextStyle(
+                                          color: cellSubject.roomColor,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
@@ -1077,7 +1090,7 @@ class BottomNavigationBarWidget extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (_) =>
-                        const sp.SettingsPage()), // 💡 sp.SettingsPage로 이동
+                    const sp.SettingsPage()), // 💡 sp.SettingsPage로 이동
               );
             },
           ),
