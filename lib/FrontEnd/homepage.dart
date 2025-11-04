@@ -1,4 +1,4 @@
-// 📄 homepage.dart (더블 탭, 금요일까지 표시, 스크롤 기능 구현 완료)
+// 📄 homepage.dart (더블 탭, 금요일까지 표시, 스크롤 기능 구현 완료, 타입 에러 수정)
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // HapticFeedback 사용을 위한 import
@@ -662,14 +662,22 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
     // TimetableProvider에서 시간표 데이터를 가져옵니다.
     // Provider의 timetable 타입이 Map<String, tp.SubjectInfo?>임을 예상하고 코드를 사용합니다.
     final timetable = context.watch<tp.TimetableProvider>().timetable;
-    final currentClass = _findCurrentClass(timetable);
 
-    // 💡 탭 이동 기능 추가 (CurrentClassBanner 전체를 InkWell로 감싸서 탭 가능하게 유지)
-    void _handleTap() {
+    // 💡 [수정] type_not_assignable 오류 해결: 명시적으로 원하는 타입으로 캐스팅하여 전달합니다.
+    final currentClass =
+        _findCurrentClass(timetable as Map<String, tp.SubjectInfo?>);
+
+    // 💡 [추가] 탭 이동 기능: 단일 탭(false), 더블 탭(true)에 따라 autoOpenLatestFile 설정
+    void _handleTap({required bool isDoubleTap}) {
       if (currentClass != null) {
         final subjectName = currentClass.subject;
-        // 💡 탭 시 햅틱 피드백 추가
-        HapticFeedback.lightImpact();
+        // 💡 탭 종류에 따라 다른 햅틱 피드백 적용
+        if (isDoubleTap) {
+          HapticFeedback.mediumImpact(); // 더블 탭: 강한 피드백
+        } else {
+          HapticFeedback.lightImpact(); // 단일 탭: 약한 피드백
+        }
+
         // TimeTableButton 페이지로 이동
         Navigator.push(
           context,
@@ -677,18 +685,21 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
             builder: (_) => TimeTableButton(
               subjectName: subjectName, // 과목명 전달
               initialItemData: null, // 현재 강의 클릭은 특정 과제/시험을 가리키지 않으므로 null
-              // 💡 [추가] 현재 강의 클릭 시 파일 자동 열림 활성화 (Double-tap 효과)
-              autoOpenLatestFile: true,
+              // 💡 [핵심 수정] 탭 종류에 따라 파일 자동 열림 활성화/비활성화
+              autoOpenLatestFile: isDoubleTap, // 더블 탭일 때만 true
             ),
           ),
         );
       }
     }
 
-    return InkWell(
-      // 💡 강의가 있을 때만 탭 가능
-      onTap: currentClass != null ? _handleTap : null,
-      borderRadius: BorderRadius.circular(12),
+    // 💡 [핵심 수정] InkWell 대신 GestureDetector를 사용하여 onTap과 onDoubleTap을 분리
+    return GestureDetector(
+      // 💡 단일 탭: autoOpenLatestFile: false
+      onTap: currentClass != null ? () => _handleTap(isDoubleTap: false) : null,
+      // 💡 더블 탭: autoOpenLatestFile: true
+      onDoubleTap:
+          currentClass != null ? () => _handleTap(isDoubleTap: true) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         height: 98, // 높이 고정 유지

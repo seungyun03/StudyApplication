@@ -1,3 +1,6 @@
+// D:\study_app\build.gradle (프로젝트 루트 레벨)
+
+// 1. 모든 프로젝트의 레포지토리 설정
 allprojects {
     repositories {
         google()
@@ -5,14 +8,20 @@ allprojects {
     }
 }
 
+// 2. 빌드 디렉토리 설정
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
+
+// 3. 중복되거나 충돌을 유발하는 subprojects 블록은 제거되었습니다.
+/* ❌ 제거 대상 블록 (원래 코드에 존재):
 subprojects {
     project.evaluationDependsOn(":app")
 }
+*/
 
+// 4. clean 태스크 정의
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }

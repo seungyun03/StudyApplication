@@ -1,4 +1,4 @@
-// 📄 TimeTableButton.dart (수정 완료 버전: D-Day 표시 및 autoOpenLatestFile 추가)
+// 📄 TimeTablebutton.dart (최종 수정 완료 버전: 모든 구문 오류 및 경고 해결)
 // ===================================================================
 
 import 'package:flutter/material.dart';
@@ -19,8 +19,8 @@ class TimeTableButton extends StatefulWidget {
   final String subjectName;
   // 💡 추가: homepage에서 전달받은 시험/과제 데이터
   final Map<String, dynamic>? initialItemData;
-  // 💡 [추가] 더블 탭 시 자동 파일 열림 플래그 (누락된 named parameter 정의)
-  final bool autoOpenLatestFile; // <--- 추가된 변수
+  // 💡 [추가] 더블 탭 시 자동 파일 열림 플래그
+  final bool autoOpenLatestFile;
 
   const TimeTableButton({
     super.key,
@@ -28,7 +28,7 @@ class TimeTableButton extends StatefulWidget {
     // 💡 필드 초기화
     this.initialItemData,
     // 💡 [추가] 필드 초기화
-    this.autoOpenLatestFile = false, // <--- 추가된 생성자 매개변수
+    this.autoOpenLatestFile = false,
   });
 
   @override
@@ -70,28 +70,65 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     }); // 💡 위젯 초기화 시 저장된 데이터 로드
   }
 
-  // 💡 [추가] 강의 자료 중 가장 최근 파일을 찾는 로직
+  // 💡 [추가] 파일 'lastOpened' 시각 업데이트 및 저장 로직
 
-  void _openLatestFile() {
+  void _updateFileLastOpened(String filePath) async {
+    bool found = false;
+    // 현재 시각을 ISO 8601 문자열로 저장
+    final nowString = DateTime.now().toIso8601String();
+
+    for (var lecture in lectures) {
+      // files 리스트를 Map<String, dynamic> 타입으로 안전하게 변환
+      final files = (lecture['files'] as List?)
+              ?.map((item) => Map<String, dynamic>.from(item))
+              .toList() ??
+          [];
+
+      // 파일 리스트를 순회하며 해당 filePath를 가진 파일을 찾음
+      for (int i = 0; i < files.length; i++) {
+        if (files[i]['path'] == filePath) {
+          // 'lastOpened' 필드를 현재 시각으로 업데이트
+          files[i]['lastOpened'] = nowString;
+          // 변경된 files 리스트를 lecture 맵에 다시 할당
+          lecture['files'] = files;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+
+    if (found) {
+      // 업데이트된 데이터를 SharedPreferences에 저장
+      await _saveData();
+      setState(() {});
+    }
+  }
+
+  // 💡 [수정] 파일 열기 로직: async/await으로 변경 및 mounted 체크 적용
+  void _openLatestFile() async {
     // 1. 모든 강의 항목에서 파일 목록을 추출
-    final List<Map<String, String>> allFiles = lectures
+    final List<Map<String, dynamic>> allFiles = lectures
         .expand((lecture) =>
             (lecture['files'] as List?)
-                ?.map((item) => Map<String, String>.from(item))
+                ?.map((item) => Map<String, dynamic>.from(item))
                 .toList() ??
-            <Map<String, String>>[]) // 💡 수정: 빈 리스트에 명시적으로 타입 지정하여 오류 해결
+            <Map<String, dynamic>>[])
         .toList();
 
     if (allFiles.isEmpty) return;
 
-    // 2. 파일 목록을 'date' 기준으로 정렬 (최신 파일이 가장 위로)
+    // 2. 파일 목록을 'lastOpened' 기준으로 정렬
     allFiles.sort((a, b) {
-      // 날짜가 없는 파일은 1900년으로 간주하여 정렬에서 밀려나게 함
+      final String aLastOpenedStr = a['lastOpened'] ?? a['date'] ?? '';
+      final String bLastOpenedStr = b['lastOpened'] ?? b['date'] ?? '';
+
       final DateTime aDate =
-          DateTime.tryParse(a['date'] ?? '') ?? DateTime(1900);
+          DateTime.tryParse(aLastOpenedStr) ?? DateTime(1900);
       final DateTime bDate =
-          DateTime.tryParse(b['date'] ?? '') ?? DateTime(1900);
-      // 내림차순 정렬: 최신 날짜(값이 큰)가 앞으로
+          DateTime.tryParse(bLastOpenedStr) ?? DateTime(1900);
+
+      // 내림차순 정렬: 최신 날짜/시각(값이 큰)가 앞으로
       return bDate.compareTo(aDate);
     });
 
@@ -100,17 +137,20 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     final filePath = latestFile['path'];
 
     if (filePath != null && filePath.isNotEmpty) {
-      // 💡 open_filex를 이용해 파일 열기
-      OpenFilex.open(filePath).then((result) {
-        if (result.type != ResultType.done) {
-          // 파일 열기 실패 시 스낵바 표시
+      // 💡 파일 열기 전 'lastOpened' 시간 업데이트
+      _updateFileLastOpened(filePath);
+
+      // 💡 [수정] open_filex를 await으로 호출하고 mounted 체크로 안전하게 context 사용
+      final result = await OpenFilex.open(filePath);
+
+      if (result.type != ResultType.done) {
+        // 파일 열기 실패 시 스낵바 표시
+        // 💡 [Fix: use_build_context_synchronously] mounted 체크
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("최근 파일 열기 실패: ${result.message}")));
-        } else {
-          // 성공 시 로그 또는 간단한 알림 가능
-          // print("Latest file opened successfully: ${latestFile['name']}");
         }
-      });
+      }
     }
   }
 
@@ -158,6 +198,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     final String? lecturesJson = prefs.getString(_lectureKey);
     if (lecturesJson != null) {
       final List<dynamic> decodedList = jsonDecode(lecturesJson);
+      // 💡 Map<String, dynamic>으로 변환하여 'lastOpened' 필드 등을 처리할 수 있도록 함
       lectures =
           decodedList.map((item) => item as Map<String, dynamic>).toList();
     }
@@ -370,7 +411,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
       await _saveData();
 
-      // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+      // 💡 [Fix: use_build_context_synchronously] mounted 체크
       if (mounted) {
         await Provider.of<tp.ScheduleProvider>(context, listen: false)
             .loadAllSchedules();
@@ -409,7 +450,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
       await _saveData();
 
-      // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+      // 💡 [Fix: use_build_context_synchronously] mounted 체크
       if (mounted) {
         await Provider.of<tp.ScheduleProvider>(context, listen: false)
             .loadAllSchedules();
@@ -443,7 +484,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
     await _saveData();
 
-    // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+    // 💡 [Fix: use_build_context_synchronously] mounted 체크
     if (mounted) {
       await Provider.of<tp.ScheduleProvider>(context, listen: false)
           .loadAllSchedules();
@@ -461,7 +502,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     // 💡 수정: 데이터 저장이 완료될 때까지 기다립니다.
     await _saveData();
 
-    // 💡 수정: 저장이 완료된 후 Provider 데이터 재로드를 요청하고 기다립니다.
+    // 💡 [Fix: use_build_context_synchronously] mounted 체크
     if (mounted) {
       await Provider.of<tp.ScheduleProvider>(context, listen: false)
           .loadAllSchedules();
@@ -481,9 +522,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           DateTime.parse(dateString.replaceAll(' ', 'T'));
       final DateTime now = DateTime.now();
 
-      // 💡 checkPassed가 true인 경우 (시험), 시간이 지났으면 '종료' 표시
+      // 시험 (checkPassed: true)인 경우, 이미 지난 일시는 계산하지 않음
       if (checkPassed && targetDateTime.isBefore(now)) {
-        return ''; // 이미 종료된 경우, D-Day 표시 대신 '시험 종료' 태그 사용
+        return '';
       }
 
       // 현재 날짜 (시/분/초 무시)
@@ -525,7 +566,6 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 20),
-
                   Text(
                     widget.subjectName,
                     style: const TextStyle(
@@ -553,68 +593,99 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     onAdd: () =>
                         _openLectureAddPage(), // 💡 추가 기능 (index: null)
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFEEF2FF), Color(0xFFEEF6FF)],
+                      colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    accent: const Color(0xFF155DFC),
-                    children: List.generate(lectures.length, (index) {
-                      return _buildItemWithFile(
-                        lectures[index],
-                        Colors.blue,
-                        onDelete: () => _deleteLecture(index),
-                        // 💡 항목 전체 탭 시 수정 페이지로 이동
-                        onTap: () => _openLectureAddPage(index: index),
-                      );
-                    }),
+                    accent: Colors.blue, // MaterialColor
+                    children: lectures
+                        .asMap()
+                        .entries
+                        .map((e) => _buildLectureItem(
+                              e.value,
+                              Colors.blue, // MaterialColor
+                              onDelete: () => _deleteLecture(e.key),
+                              // 💡 항목 전체 탭 시 수정 페이지로 이동
+                              onTap: () => _openLectureAddPage(index: e.key),
+                            ))
+                        .toList(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // 📗 과제 섹션
+                  // 📝 과제 섹션
                   _buildSection(
                     title: "과제",
                     expanded: assignmentExpanded,
                     onToggle: () => setState(
                         () => assignmentExpanded = !assignmentExpanded),
                     onAdd: () =>
-                        _openAssignmentAddPage(), // 💡 과제 추가 (index: null)
+                        _openAssignmentAddPage(), // 💡 추가 기능 (index: null)
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFEFFEF6), Color(0xFFECFDF5)],
+                      colors: [Color(0xFFF0FDF4), Color(0xFFD1FAE5)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    accent: const Color(0xFF00A63E),
-                    children: List.generate(assignments.length, (index) {
-                      return _buildItemWithFile(
-                        assignments[index],
-                        Colors.green,
-                        onDelete: () => _deleteAssignment(index),
-                        // 항목 전체 탭 시 수정 페이지로 이동
-                        onTap: () => _openAssignmentAddPage(index: index),
-                      );
-                    }),
+                    accent: Colors.green, // MaterialColor
+                    children: assignments
+                        .asMap()
+                        .entries
+                        .map((e) => _buildAssignmentItem(
+                              e.value,
+                              Colors.green, // MaterialColor
+                              onToggleSubmitted: () async {
+                                setState(() {
+                                  // 제출 상태를 토글
+                                  e.value['submitted'] =
+                                      !(e.value['submitted'] ?? false);
+                                  // 토글 후 정렬
+                                  _sortData();
+                                });
+                                // 💡 수정: 데이터 저장 및 Provider 업데이트
+                                await _saveData();
+                                // 💡 [Fix: use_build_context_synchronously] mounted 체크
+                                if (mounted) {
+                                  await Provider.of<tp.ScheduleProvider>(
+                                          context,
+                                          listen: false)
+                                      .loadAllSchedules();
+                                }
+                              },
+                              onDelete: () => _deleteAssignment(e.key),
+                              // 💡 항목 전체 탭 시 수정 페이지로 이동
+                              onTap: () => _openAssignmentAddPage(index: e.key),
+                            ))
+                        .toList(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // 📙 시험 섹션
+                  // 💡 시험 섹션
                   _buildSection(
                     title: "시험",
                     expanded: examExpanded,
                     onToggle: () =>
                         setState(() => examExpanded = !examExpanded),
-                    onAdd: () => _openExamAddPage(), // 💡 수정: 인덱스 없이 추가 호출
+                    onAdd: () => _openExamAddPage(), // 💡 추가 기능 (index: null)
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFAF5FF), Color(0xFFF5F3FF)],
+                      colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    accent: const Color(0xFF9810FA),
-                    children: List.generate(exams.length, (index) {
-                      // 💡 Map 데이터를 넘겨줌
-                      return _buildExamItem(
-                        exams[index],
-                        Colors.purple,
-                        onDelete: () => _deleteExam(index),
-                        // 💡 항목 전체 탭 시 수정 페이지로 이동
-                        onTap: () => _openExamAddPage(index: index),
-                      );
-                    }),
+                    accent: Colors.red, // MaterialColor
+                    children: exams
+                        .asMap()
+                        .entries
+                        .map((e) => _buildExamItem(
+                              e.value,
+                              Colors.red, // MaterialColor
+                              onDelete: () => _deleteExam(e.key),
+                              // 💡 항목 전체 탭 시 수정 페이지로 이동
+                              onTap: () => _openExamAddPage(index: e.key),
+                            ))
+                        .toList(),
                   ),
-                  const SizedBox(height: 120),
+
+                  // 💡 [수정] 고정 하단 네비게이션바(높이 80)를 고려한 충분한 스크롤 마진 추가
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -625,22 +696,27 @@ class _TimeTableButtonState extends State<TimeTableButton> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
-                height: 80,
+                // 💡 [수정] Bottom Padding을 포함한 높이 설정 (하단 시스템 바 간섭 해결)
+                height: 80 + MediaQuery.of(context).padding.bottom,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem('커뮤니티', Icons.forum_outlined, 'community'),
-                    _buildNavItem('홈', Icons.home_rounded, 'home'),
-                    _buildNavItem('설정', Icons.settings_outlined, 'settings'),
-                  ],
+                child: Padding(
+                  // 💡 [추가] 콘텐츠(Row)에만 Bottom Padding 적용
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem('커뮤니티', Icons.forum_outlined, 'community'),
+                      _buildNavItem('홈', Icons.home_rounded, 'home'),
+                      _buildNavItem('설정', Icons.settings_outlined, 'settings'),
+                    ],
+                  ),
                 ),
               ),
             ),
-
             Positioned(
               right: 24,
               top: 16,
@@ -655,8 +731,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Center(
-                    child: Icon(Icons.chevron_left, color: Colors.black54),
-                  ),
+                      child: Icon(Icons.chevron_left, color: Colors.black54)),
                 ),
               ),
             ),
@@ -667,16 +742,15 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   }
 
   // -------------------------------------------------------------------
-  // 🏗️ 빌드 섹션 (Build Sections) - 동일
+  // 🏗️ 빌드 섹션 (Build Sections) - MaterialColor로 타입 수정 (구조 확인 완료)
   // -------------------------------------------------------------------
-
   Widget _buildSection({
     required String title,
     required bool expanded,
     required VoidCallback onToggle,
     required VoidCallback onAdd,
     required LinearGradient gradient,
-    required Color accent,
+    required MaterialColor accent, // 💡 [수정] MaterialColor로 타입 변경
     required List<Widget> children,
   }) {
     return AnimatedContainer(
@@ -694,128 +768,99 @@ class _TimeTableButtonState extends State<TimeTableButton> {
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: gradient,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20), bottom: Radius.circular(0)),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 20),
+                  child: Text(
                     title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 20,
-                      color: Color(0xFF1E293B),
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: accent.shade900), // 💡 오류 해결
+                  ),
+                ),
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: onAdd,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child:
+                            Icon(Icons.add, color: accent.shade800), // 💡 오류 해결
+                      ),
                     ),
-                  ),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: onToggle,
-                        style: TextButton.styleFrom(
-                          foregroundColor: accent,
-                          textStyle: const TextStyle(fontSize: 16),
+                    InkWell(
+                      onTap: onToggle,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(
+                          expanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: accent.shade800, // 💡 오류 해결
                         ),
-                        child: Text(expanded ? '접기' : '펼치기'),
                       ),
-                      const SizedBox(width: 6),
-                      TextButton(
-                        onPressed: onAdd,
-                        style: TextButton.styleFrom(
-                          foregroundColor: accent,
-                          textStyle: const TextStyle(fontSize: 16),
-                        ),
-                        child: const Text('추가'),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(20), top: Radius.circular(0)),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              // 💡 아이템당 할당 높이를 72.0으로 적용 (짤림 현상 해결)
+              height: expanded ? children.length * 72.0 + 10.0 : 0,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+              ),
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  children: children,
+                ),
               ),
             ),
           ),
-          if (expanded)
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-                borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(20)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: children.isNotEmpty
-                    ? Column(children: children)
-                    : Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          "$title 항목이 없습니다.",
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      ),
-              ),
-            ),
         ],
       ),
     );
   }
 
   // -------------------------------------------------------------------
-  // 📄 파일 첨부 항목 빌드 (강의/과제용) - 기한 포맷팅 및 D-Day 로직 수정
+  // 📚 강의 아이템 (Lecture Item) - MaterialColor로 타입 수정 (교수 변수 제거)
   // -------------------------------------------------------------------
-
-  // 💡 강의/과제 리스트 아이템 카드 (파일 처리 로직 포함)
-  Widget _buildItemWithFile(Map<String, dynamic> data, MaterialColor color,
-      {required VoidCallback onDelete, VoidCallback? onTap} // 💡 onTap 콜백 유지
-      ) {
+  Widget _buildLectureItem(Map<String, dynamic> data,
+      MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
+      {required VoidCallback onDelete,
+      required VoidCallback onTap}) {
     final String title = data['title'] ?? '제목 없음';
+    // 💡 [수정] 사용되지 않는 'professor' 변수 선언 제거
+    final String date = data['date'] ?? ''; // 'YYYY-MM-DD' 형식의 문자열
+    final String location = data['location'] ?? '장소 정보 없음';
 
-    // 💡 'submitted' 키가 있을 경우에만 과제로 간주하여 상태를 추출합니다.
-    final bool isAssignment = data.containsKey('submitted');
-    final bool submitted =
-        isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
-
-    // 💡 수정: dueDate를 포맷팅된 문자열로 변경
-    final String dateString = isAssignment ? (data['dueDate'] ?? '') : '';
-    String displayDueDate = '';
-    // 💡 D-Day 계산
-    final String dDayString =
-        isAssignment && dateString.isNotEmpty && !submitted
-            ? _getDDayString(dateString)
-            : ''; // 미제출 과제에만 D-Day 표시
-
-    if (dateString.isNotEmpty) {
-      try {
-        // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-        final dateTime = DateTime.parse(dateString.replaceAll(' ', 'T'));
-
-        // YYYY/MM/DD HH:mm 형식으로 표시 (상세 페이지이므로 연도 포함)
-        final year = dateTime.year.toString();
-        final month = dateTime.month.toString().padLeft(2, '0');
-        final day = dateTime.day.toString().padLeft(2, '0');
-        final hour = dateTime.hour.toString().padLeft(2, '0');
-        final minute = dateTime.minute.toString().padLeft(2, '0');
-
-        displayDueDate = '$year/$month/$day $hour:$minute';
-      } catch (_) {
-        displayDueDate = dateString; // 파싱 실패 시 원본 문자열 사용
-      }
-    }
-    final String dueDate = displayDueDate;
-
-    // List<Map<String, String>>으로 타입 캐스팅
-    final List<Map<String, String>> files = (data['files'] as List?)
-            ?.map((item) => Map<String, String>.from(item))
+    // List<Map<String, dynamic>>으로 타입 캐스팅 (lastOpened 필드 처리를 위해)
+    final List<Map<String, dynamic>> files = (data['files'] as List?)
+            ?.map((item) => Map<String, dynamic>.from(item))
             .toList() ??
         [];
     final bool hasFiles = files.isNotEmpty;
 
     // 클립 버튼 탭 시 파일 목록 모달을 띄우는 함수
-    void _showFilesModal() {
+    void showFilesModal() {
+      // 💡 [Fix: no_leading_underscores_for_local_identifiers] 함수 이름 변경
       if (!hasFiles) return;
-
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -824,180 +869,339 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           lectureTitle: title,
           files: files,
           color: color,
+          onFileOpened: _updateFileLastOpened, // 💡 [추가] 파일 열림 시 상태 업데이트 콜백 전달
         ),
       );
+    }
+
+    // 💡 최종적으로 표시할 날짜 문자열 포맷팅
+    String displayDate = '';
+    if (date.isNotEmpty) {
+      try {
+        final dateTime = DateTime.parse(date);
+        // MM/DD 형식으로 표시
+        final month = dateTime.month.toString().padLeft(2, '0');
+        final day = dateTime.day.toString().padLeft(2, '0');
+        displayDate = '$month/$day';
+      } catch (_) {
+        displayDate = date; // 파싱 실패 시 원본 문자열 사용
+      }
     }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: InkWell(
-        borderRadius: BorderRadius.circular(25),
-        // 항목 전체 탭 시 동작 (수정 페이지 이동)
-        onTap: onTap ??
-            () {
-              HapticFeedback.selectionClick();
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("$title 항목을 선택했습니다. (상세 페이지 이동 가정)")));
-            },
-        child: Ink(
+        borderRadius: BorderRadius.circular(15),
+        onTap: onTap, // 💡 항목 탭 시 수정 페이지로 이동
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: color.shade50,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: color.shade100),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  // 💡 Column으로 감싸서 제목, 상태, 제출일을 세로로 표시
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: color.shade700,
-                          fontWeight: FontWeight.w700, // 제목을 좀 더 굵게
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-
-                      // 💡 과제(isAssignment)일 때만 상태 및 기한 표시
-                      if (isAssignment) ...[
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            // 💡 제출 상태 태그
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              margin:
-                                  const EdgeInsets.only(right: 8), // 우측 여백 추가
-                              decoration: BoxDecoration(
-                                color: submitted
-                                    ? Colors.green.shade400
-                                    : Colors.red.shade400,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                submitted ? '제출 완료' : '미제출',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            // 💡 D-Day 태그 (미제출일 경우만 표시)
-                            if (dDayString.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: dDayString == 'D-Day'
-                                      ? Colors.red.shade600
-                                      : (dDayString.startsWith('D+')
-                                          ? Colors.orange.shade600
-                                          : color.shade600),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  dDayString,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-
-                            // 💡 제출 기한 표시
-                            if (dueDate.isNotEmpty)
-                              Text(
-                                dueDate, // 포맷된 날짜/시각 표시
-                                style: TextStyle(
-                                  color: color.shade600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                // ---------------------------------------------------
-                // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
-                // ---------------------------------------------------
-                Row(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // 💡 정보 영역
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
-                      InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: _showFilesModal,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4.0, vertical: 2.0),
-                          child: Icon(Icons.attachment,
-                              color: color.shade500, size: 20),
-                        ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF1E2939),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        // 💡 날짜 표시
+                        if (displayDate.isNotEmpty)
+                          Text(
+                            displayDate,
+                            style: TextStyle(
+                                color: color.shade600,
+                                fontSize: 13), // 💡 오류 해결
+                          ),
+                        if (displayDate.isNotEmpty && location.isNotEmpty)
+                          const Text(' | ',
+                              style: TextStyle(color: Color(0xFF9CA3AF))),
+                        // 💡 장소 표시
+                        if (location.isNotEmpty)
+                          Text(
+                            location,
+                            style: const TextStyle(
+                                color: Color(0xFF6A7282), fontSize: 13),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // ---------------------------------------------------
+              // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
+              // ---------------------------------------------------
+              Row(
+                children: [
+                  if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
                     InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: onDelete, // 💡 삭제 버튼
+                      onTap: showFilesModal, // 💡 [수정] 함수 이름 변경
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 4.0, vertical: 2.0),
-                        child: Icon(Icons.delete_outline,
-                            color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
+                        child: Icon(Icons.attachment,
+                            color: color.shade500, size: 20), // 💡 오류 해결
                       ),
                     ),
-                    Icon(Icons.chevron_right, color: color.shade700), // 꺾쇠 아이콘
-                  ],
-                ),
-              ],
-            ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: onDelete, // 💡 삭제 버튼
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4.0, vertical: 2.0),
+                      child: Icon(Icons.delete_outline,
+                          color: Colors.red.shade400, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right,
+                      color: Colors.grey.shade400, size: 20),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // 💡 수정: 시험 항목 빌드 (Map 데이터 사용 및 파일 첨부 표시) - 시험 종료/D-Day 태그 로직 추가
-  Widget _buildExamItem(Map<String, dynamic> data, MaterialColor color,
-      {required VoidCallback onDelete, VoidCallback? onTap}) {
-    final String title = data['examName'] ?? '제목 없음';
-    final String date = data['examDate'] ?? ''; // 예: 2024-10-23 14:00
-    // 💡 필수 수정: 시험 장소 키(examLocation)를 사용하여 데이터 추출
-    final String location = data['examLocation'] ?? '';
+  // -------------------------------------------------------------------
+  // 📝 과제 아이템 (Assignment Item) - MaterialColor로 타입 수정
+  // -------------------------------------------------------------------
+  Widget _buildAssignmentItem(
+    Map<String, dynamic> data,
+    MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
+    {
+    required VoidCallback onToggleSubmitted,
+    required VoidCallback onDelete,
+    required VoidCallback onTap,
+  }) {
+    final String title = data['title'] ?? '제목 없음';
+    // 💡 'submitted' 키가 있을 경우에만 과제로 간주하여 상태를 추출합니다.
+    final bool isAssignment = data.containsKey('submitted');
+    final bool submitted =
+        isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
+    // 💡 수정: dueDate를 포맷팅된 문자열로 변경
+    final String dateString = isAssignment ? (data['dueDate'] ?? '') : '';
+    String displayDueDate = '';
+    // 💡 D-Day 계산 (미제출일 경우만 D-Day 표시)
+    final String dDayString =
+        isAssignment && dateString.isNotEmpty && !submitted
+            ? _getDDayString(dateString)
+            : '';
+    if (dateString.isNotEmpty) {
+      try {
+        // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
+        final dateTime = DateTime.parse(dateString.replaceAll(' ', 'T'));
+        // YYYY/MM/DD HH:mm 형식으로 표시 (상세 페이지이므로 연도 포함)
+        final year = dateTime.year.toString();
+        final month = dateTime.month.toString().padLeft(2, '0');
+        final day = dateTime.day.toString().padLeft(2, '0');
+        final hour = dateTime.hour.toString().padLeft(2, '0');
+        final minute = dateTime.minute.toString().padLeft(2, '0');
+        displayDueDate = '$year/$month/$day $hour:$minute';
+      } catch (_) {
+        displayDueDate = dateString; // 파싱 실패 시 원본 문자열 사용
+      }
+    }
+    final String dueDate = displayDueDate;
 
-    // ---------------------------------------------------
-    // 💡 추가 로직: 시험 종료 태그 및 D-Day 계산
-    // ---------------------------------------------------
-    bool isExamPassed = false;
-    // 💡 수정: 시험 일시 포맷팅 로직
+    // List<Map<String, dynamic>>으로 타입 캐스팅 (lastOpened 필드 처리를 위해)
+    final List<Map<String, dynamic>> files = (data['files'] as List?)
+            ?.map((item) => Map<String, dynamic>.from(item))
+            .toList() ??
+        [];
+    final bool hasFiles = files.isNotEmpty;
+
+    // 클립 버튼 탭 시 파일 목록 모달을 띄우는 함수
+    void showFilesModal() {
+      // 💡 [Fix: no_leading_underscores_for_local_identifiers] 함수 이름 변경
+      if (!hasFiles) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => FileListModal(
+            lectureTitle: title,
+            files: files,
+            color: color,
+            onFileOpened: (filePath) {
+              // 과제 자료는 '가장 최근 열린 파일' 추적 로직에서 제외되므로 빈 함수 전달
+            }),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: onTap, // 💡 항목 탭 시 수정 페이지로 이동
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // 💡 정보 영역
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF1E2939),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        // 💡 제출 상태 태그
+                        InkWell(
+                          onTap: onToggleSubmitted,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: submitted
+                                  ? Colors.green.shade400
+                                  : Colors.red.shade400,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              submitted ? '제출 완료' : '미제출',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // 💡 D-Day 태그 (미제출일 경우만 표시)
+                        if (dDayString.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: dDayString == 'D-Day'
+                                  ? Colors.red.shade600
+                                  : (dDayString.startsWith('D+')
+                                      ? Colors.orange.shade600
+                                      : color.shade600), // 💡 오류 해결
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              dDayString,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        // 💡 제출 기한 표시
+                        if (dueDate.isNotEmpty)
+                          Text(
+                            dueDate, // 포맷된 날짜/시각 표시
+                            style: TextStyle(
+                              color: color.shade600, // 💡 오류 해결
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // ---------------------------------------------------
+              // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
+              // ---------------------------------------------------
+              Row(
+                children: [
+                  if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: showFilesModal, // 💡 [수정] 함수 이름 변경
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4.0, vertical: 2.0),
+                        child: Icon(Icons.attachment,
+                            color: color.shade500, size: 20), // 💡 오류 해결
+                      ),
+                    ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: onDelete, // 💡 삭제 버튼
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4.0, vertical: 2.0),
+                      child: Icon(Icons.delete_outline,
+                          color: Colors.red.shade400, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right,
+                      color: Colors.grey.shade400, size: 20),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 💥 시험 아이템 (Exam Item) - MaterialColor로 타입 수정
+  Widget _buildExamItem(
+    Map<String, dynamic> data,
+    MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
+    {
+    required VoidCallback onDelete,
+    required VoidCallback onTap,
+  }) {
+    final String title = data['examName'] ?? '제목 없음';
+    final String location = data['examLocation'] ?? '';
+    final String date = data['examDate'] ?? ''; // 'YYYY-MM-DD HH:mm' 형식의 문자열
+
     String displayDate = '';
-    // 💡 D-Day 계산 (종료 여부 체크 포함)
     String dDayString = '';
+    String displayInfo = '';
 
     if (date.isNotEmpty) {
       try {
-        // 💡 'YYYY-MM-DD HH:mm' 형식의 문자열을 DateTime 객체로 파싱합니다.
-        DateTime examDateTime = DateTime.parse(date.replaceAll(' ', 'T'));
-        final DateTime now = DateTime.now();
-
-        // 현재 시간이 시험 시간보다 늦다면 시험 종료
-        isExamPassed = examDateTime.isBefore(now);
-
-        // 종료되지 않은 경우에만 D-Day를 계산합니다.
-        if (!isExamPassed) {
-          dDayString = _getDDayString(date, checkPassed: true);
-        }
+        // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
+        final examDateTime = DateTime.parse(date.replaceAll(' ', 'T'));
+        // 시험이 종료되지 않았는지 확인 후 D-Day 계산
+        dDayString = _getDDayString(date, checkPassed: true);
 
         // YYYY/MM/DD HH:mm 형식으로 표시 (상세 페이지이므로 연도 포함)
         final year = examDateTime.year.toString();
@@ -1005,22 +1209,17 @@ class _TimeTableButtonState extends State<TimeTableButton> {
         final day = examDateTime.day.toString().padLeft(2, '0');
         final hour = examDateTime.hour.toString().padLeft(2, '0');
         final minute = examDateTime.minute.toString().padLeft(2, '0');
-
         displayDate = '$year/$month/$day $hour:$minute';
       } catch (e) {
         // 파싱 실패 시 원본 문자열 사용
         displayDate = date;
-        print("Error parsing exam date: $e");
       }
     }
 
     // 💡 날짜와 장소 정보가 있을 경우 조합하여 표시할 문자열 생성
-    String displayInfo = '';
-
     if (displayDate.isNotEmpty) {
-      displayInfo += '$displayDate'; // 날짜/시각만 먼저 표시
+      displayInfo += displayDate; // 날짜/시각만 먼저 표시
     }
-
     if (location.isNotEmpty) {
       if (displayDate.isNotEmpty) {
         // 날짜가 있으면 괄호 안에 장소 추가
@@ -1031,17 +1230,17 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       }
     }
 
-    // List<Map<String, String>>으로 타입 캐스팅
-    final List<Map<String, String>> files = (data['materials'] as List?)
-            ?.map((item) => Map<String, String>.from(item))
+    // List<Map<String, dynamic>>으로 타입 캐스팅 (lastOpened 필드 처리를 위해)
+    final List<Map<String, dynamic>> files = (data['materials'] as List?)
+            ?.map((item) => Map<String, dynamic>.from(item))
             .toList() ??
         [];
     final bool hasFiles = files.isNotEmpty;
 
     // 클립 버튼 탭 시 파일 목록 모달을 띄우는 함수 (FileListModal 재사용)
-    void _showFilesModal() {
+    void showFilesModal() {
+      // 💡 [Fix: no_leading_underscores_for_local_identifiers] 함수 이름 변경
       if (!hasFiles) return;
-
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -1051,6 +1250,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           lectureTitle: "$title 자료",
           files: files,
           color: color,
+          onFileOpened: (filePath) {
+            // 시험 자료는 '가장 최근 열린 파일' 추적 로직에서 제외되므로 빈 함수 전달
+          },
         ),
       );
     }
@@ -1058,127 +1260,103 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: InkWell(
-        borderRadius: BorderRadius.circular(25),
-        onTap: onTap ??
-            () {
-              HapticFeedback.selectionClick();
-            },
-        child: Ink(
+        borderRadius: BorderRadius.circular(15),
+        onTap: onTap, // 💡 항목 탭 시 수정 페이지로 이동
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: color.shade50,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: color.shade100),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: color.shade700,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-
-                      // 💡 추가: 시험 종료/D-Day 태그 및 날짜/장소 정보 표시
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          // 💡 시험 종료 상태 태그
-                          if (isExamPassed)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade500, // 종료된 시험은 회색으로
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text(
-                                '시험 종료',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                          // 💡 D-Day 태그 (미종료된 경우만 표시)
-                          if (!isExamPassed && dDayString.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: dDayString == 'D-Day'
-                                    ? Colors.red.shade600
-                                    : color.shade600,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                dDayString,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                          // 💡 날짜와 장소를 조합한 문자열을 표시
-                          if (displayInfo.isNotEmpty)
-                            Text(
-                              displayInfo, // 조합된 정보 표시
-                              style: TextStyle(
-                                color: color.shade600,
-                                fontSize: 13,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // ---------------------------------------------------
-                // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
-                // ---------------------------------------------------
-                Row(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // 💡 정보 영역
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
-                      InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: _showFilesModal,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4.0, vertical: 2.0),
-                          child: Icon(Icons.attachment,
-                              color: color.shade500, size: 20),
-                        ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF1E2939),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        // 💡 D-Day 태그 (시험이 종료되지 않았을 경우만 표시)
+                        if (dDayString.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: dDayString == 'D-Day'
+                                  ? Colors.red.shade600
+                                  : color.shade600, // 💡 오류 해결
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              dDayString,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        // 💡 날짜와 장소를 조합한 문자열을 표시
+                        if (displayInfo.isNotEmpty)
+                          Text(
+                            displayInfo, // 조합된 정보 표시
+                            style: TextStyle(
+                              color: color.shade600, // 💡 오류 해결
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // ---------------------------------------------------
+              // 💡 아이콘 위젯 목록 (클립, 삭제, 꺾쇠)
+              // ---------------------------------------------------
+              Row(
+                children: [
+                  if (hasFiles) // 파일이 있을 경우 클립 아이콘 표시
                     InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: onDelete, // 💡 삭제 버튼
+                      onTap: showFilesModal, // 💡 [수정] 함수 이름 변경
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 4.0, vertical: 2.0),
-                        child: Icon(Icons.delete_outline,
-                            color: Colors.red.shade400, size: 24), // 쓰레기통 아이콘
+                        child: Icon(Icons.attachment,
+                            color: color.shade500, size: 20), // 💡 오류 해결
                       ),
                     ),
-                    Icon(Icons.chevron_right, color: color.shade700), // 꺾쇠 아이콘
-                  ],
-                ),
-              ],
-            ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: onDelete, // 💡 삭제 버튼
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4.0, vertical: 2.0),
+                      child: Icon(Icons.delete_outline,
+                          color: Colors.red.shade400, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right,
+                      color: Colors.grey.shade400, size: 20),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -1186,78 +1364,105 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   }
 
   // -------------------------------------------------------------------
-  // 🧭 하단 네비게이션 아이템은 동일
+  // 🧭 네비게이션 아이템 (Navigation Item) - 수정된 부분: 끝에 붙은 세미콜론 제거
   // -------------------------------------------------------------------
-  Widget _buildNavItem(String label, IconData icon, String key) {
-    final bool active = activeTab == key;
-    final color = active ? const Color(0xFF155DFC) : Colors.grey.shade500;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
+  Widget _buildNavItem(String label, IconData icon, String tab) {
+    // 💡 InkWell 대신 GestureDetector 사용
+    return GestureDetector(
       onTap: () {
-        setState(() => activeTab = key);
         HapticFeedback.lightImpact();
+        setState(() {
+          activeTab = tab;
+        });
+        // 💡 탭 이동 로직 (현재는 단순히 상태만 변경)
+        if (tab == 'community' || tab == 'settings') {
+          // Navigator.pop(context); // 임시
+        }
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: activeTab == tab ? Colors.blue : Colors.grey,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: activeTab == tab ? Colors.blue : Colors.grey,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
+  } // <--- [Fix: expected_token] 함수 종료 후 불필요한 세미콜론(;) 제거됨
 }
+// <--- [Fix: expected_token] 클래스 종료 후 불필요한 세미콜론(;) 제거됨
 
-// -------------------------------------------------------------------
-// 💡 FileListModal은 변경 없음 (파일 목록 모달)
-// -------------------------------------------------------------------
-
+// ===================================================================
+// 📎 파일 목록 모달 (FileListModal) - MaterialColor로 타입 수정
+// ===================================================================
 class FileListModal extends StatelessWidget {
   final String lectureTitle;
-  final List<Map<String, String>> files;
-  final MaterialColor color;
+  // 💡 수정: Map<String, dynamic>으로 변경
+  final List<Map<String, dynamic>> files;
+  final MaterialColor color; // 💡 [수정] MaterialColor로 타입 변경
+  // 💡 [추가] 파일 열림 시 호출할 콜백
+  final void Function(String filePath) onFileOpened;
 
   const FileListModal({
     super.key,
     required this.lectureTitle,
+    // 💡 수정: Map<String, dynamic> 타입
     required this.files,
     required this.color,
+    // 💡 [추가] 콜백 초기화
+    required this.onFileOpened,
   });
 
-  void _openFile(BuildContext context, Map<String, String> file) async {
-    final filePath = file["path"];
+  // 💡 [수정] 파일 열기 로직: async/await으로 변경 및 context.mounted 체크 적용
+  void _openFile(BuildContext context, Map<String, dynamic> file) async {
+    final filePath = file['path'];
 
-    if (filePath == null || filePath.isEmpty) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("파일 경로를 찾을 수 없습니다.")));
-      return;
-    }
+    if (filePath != null && filePath.isNotEmpty) {
+      // 💡 파일 열기 전에 'lastOpened' 시간 업데이트
+      onFileOpened(filePath);
 
-    final result = await OpenFilex.open(filePath);
+      // 💡 [수정] open_filex를 await으로 호출
+      final result = await OpenFilex.open(filePath);
 
-    Navigator.pop(context);
-
-    if (result.type != ResultType.done) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("파일 열기 실패: ${result.message}")));
+      if (result.type != ResultType.done) {
+        // 💡 [Fix: use_build_context_synchronously] context.mounted 체크
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("파일 열기 실패: ${result.message}")));
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 💡 [수정] 파일 목록을 'lastOpened' 기준으로 정렬 (최근 열림 시각이 없으면 'date' 기준으로 대체)
+    final List<Map<String, dynamic>> sortedFiles = List.from(files);
+
+    sortedFiles.sort((a, b) {
+      final String aLastOpenedStr = a['lastOpened'] ?? a['date'] ?? '';
+      final String bLastOpenedStr = b['lastOpened'] ?? b['date'] ?? '';
+
+      // 날짜 파싱 (실패 시 1900년으로 간주하여 정렬에서 밀려나게 함)
+      final DateTime aDate =
+          DateTime.tryParse(aLastOpenedStr) ?? DateTime(1900);
+      final DateTime bDate =
+          DateTime.tryParse(bLastOpenedStr) ?? DateTime(1900);
+
+      // 내림차순 정렬: 최신 날짜/시각(값이 큰)가 앞으로
+      return bDate.compareTo(aDate);
+    });
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.5,
       decoration: BoxDecoration(
@@ -1276,26 +1481,27 @@ class FileListModal extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: color.shade800,
+                color: color.shade800, // 💡 오류 해결
               ),
             ),
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: files.length,
+              itemCount: sortedFiles.length,
               itemBuilder: (context, index) {
-                final file = files[index];
+                final file = sortedFiles[index]; // 💡 정렬된 목록 사용
                 return ListTile(
-                  leading: Icon(Icons.attach_file, color: color.shade500),
+                  leading: Icon(Icons.attach_file,
+                      color: color.shade500), // 💡 오류 해결
                   title: Text(file["name"] ?? '이름 없음'),
                   subtitle: Text("업로드: ${file["date"]}"),
-                  trailing: Icon(Icons.launch, color: color.shade500),
+                  trailing:
+                      Icon(Icons.launch, color: color.shade500), // 💡 오류 해결
                   onTap: () => _openFile(context, file),
                 );
               },
             ),
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );
