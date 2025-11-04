@@ -1,4 +1,4 @@
-// 📄 homepage.dart (FullTimeTable 오류 해결 버전)
+// 📄 homepage.dart (최종 코드 - UI 디자인 유지)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -667,28 +667,50 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
     final timetable = context.watch<tp.TimetableProvider>().timetable;
     final currentClass = _findCurrentClass(timetable);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      height: 98, // 높이 고정 유지
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, offset: Offset(0, 1), blurRadius: 2),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center, // 중앙 정렬 대신 내용 정렬에 집중
-        children: [
-          // 현재 진행 중인 강의 헤더는 생략하고 내용만 간결하게 표시 (기존 위젯 높이 유지)
-          if (currentClass != null)
-            _CurrentClassInfo(
-                subject: currentClass, currentHour: DateTime.now().hour)
-          else
-            const _NoCurrentClassInfo(),
-        ],
+    // 💡 탭 이동 기능 추가 (CurrentClassBanner 전체를 InkWell로 감싸서 탭 가능하게 유지)
+    void _handleTap() {
+      if (currentClass != null) {
+        final subjectName = currentClass.subject;
+        // TimeTableButton 페이지로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TimeTableButton(
+              subjectName: subjectName, // 과목명 전달
+              initialItemData: null, // 현재 강의 클릭은 특정 과제/시험을 가리키지 않으므로 null
+            ),
+          ),
+        );
+      }
+    }
+
+    return InkWell(
+      onTap: currentClass != null ? _handleTap : null, // 강의가 있을 때만 탭 가능
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        height: 98, // 높이 고정 유지
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black12, offset: Offset(0, 1), blurRadius: 2),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center, // 중앙 정렬 대신 내용 정렬에 집중
+          children: [
+            // 현재 진행 중인 강의 헤더는 생략하고 내용만 간결하게 표시 (기존 위젯 높이 유지)
+            if (currentClass != null)
+              _CurrentClassInfo(
+                  subject: currentClass, currentHour: DateTime.now().hour)
+            else
+              const _NoCurrentClassInfo(),
+          ],
+        ),
       ),
     );
   }
@@ -708,6 +730,7 @@ class _CurrentClassInfo extends StatelessWidget {
         '${currentHour.toString().padLeft(2, '0')}:00 - ${nextHour.toString().padLeft(2, '0')}:00';
     final location = subject.room.isNotEmpty ? subject.room : '강의실 정보 없음';
 
+    // 🚨 [UI 유지] 현재 강의 위젯의 디자인을 그대로 유지
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -784,6 +807,7 @@ class _NoCurrentClassInfo extends StatelessWidget {
       message = "현재 진행 중인 수업이 없습니다. ☕";
     }
 
+    // 🚨 [UI 유지] 현재 강의 없음 위젯의 디자인을 그대로 유지
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -841,6 +865,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
       "23:00" // 💡 추가
     ];
 
+    // 🚨 [UI 유지] 주간 시간표 위젯의 디자인(컨테이너, 헤더, 목록)을 그대로 유지
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -958,11 +983,13 @@ class WeeklyTimetableWidget extends StatelessWidget {
                         Builder(
                           builder: (context) {
                             final cellSubject = timetable["$d-$t"];
+                            // 🚨 [UI 유지] 시간표 버튼(셀)의 디자인을 그대로 유지
                             return Expanded(
                               child: GestureDetector(
                                 onTap: () {
-                                  if (cellSubject == null) {
-                                    // 💡 수정: EditingPageParents에 prefix (ep.) 사용
+                                  if (cellSubject == null ||
+                                      cellSubject.subject.isEmpty) {
+                                    // 💡 빈 셀 탭 시 수정 페이지로 이동
                                     Navigator.push(
                                       context,
                                       // 🚨 핵심 수정: ep. prefix 사용
@@ -971,7 +998,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                               const ep.EditingPageParents()),
                                     );
                                   } else {
-                                    // 💡 수정: TimeTableButton에 과목명만 전달하도록 수정
+                                    // 💡 강의 셀 탭 시 TimeTableButton으로 이동
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -994,7 +1021,8 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                         Border.all(color: Colors.grey.shade300),
                                   ),
                                   alignment: Alignment.center,
-                                  child: cellSubject == null
+                                  child: (cellSubject == null ||
+                                          cellSubject.subject.isEmpty)
                                       ? const SizedBox.shrink()
                                       : Column(
                                           mainAxisAlignment:
@@ -1005,14 +1033,17 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                               style: TextStyle(
                                                 color: cellSubject.textColor,
                                                 fontWeight: FontWeight.bold,
+                                                fontSize: 12, // 크기 조정
                                               ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                             Text(
                                               cellSubject.room,
                                               style: TextStyle(
                                                 color: cellSubject.roomColor,
-                                                fontSize: 13,
+                                                fontSize: 11, // 크기 조정
                                               ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ],
                                         ),

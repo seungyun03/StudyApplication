@@ -26,12 +26,12 @@ class SubjectInfo extends ChangeNotifier {
 
   // ✨ JSON 변환 (저장 시 사용)
   Map<String, dynamic> toJson() => {
-    'subject': subject,
-    'room': room,
-    'bgColor': bgColor.value, // Color를 int 값으로 저장
-    'textColor': textColor.value,
-    'roomColor': roomColor.value,
-  };
+        'subject': subject,
+        'room': room,
+        'bgColor': bgColor.value, // Color를 int 값으로 저장
+        'textColor': textColor.value,
+        'roomColor': roomColor.value,
+      };
 
   // ✨ JSON으로부터 객체 생성 (로드 시 사용)
   factory SubjectInfo.fromJson(Map<String, dynamic> json) {
@@ -117,7 +117,7 @@ class TimetableProvider extends ChangeNotifier {
   Future<void> saveSubjectList() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final List<Map<String, dynamic>> jsonToEncode =
-    _subjectList.map((info) => info.toJson()).toList();
+        _subjectList.map((info) => info.toJson()).toList();
     final String jsonString = jsonEncode(jsonToEncode);
     await prefs.setString(_subjectListKey, jsonString);
   }
@@ -139,8 +139,11 @@ class TimetableProvider extends ChangeNotifier {
     _subjectList.remove(subjectToDelete);
 
     // 2. 시간표 슬롯에서 해당 과목을 null로 설정하여 시간표에서 제거
-    final keysToRemove = _timetable.keys.where((key) =>
-    _timetable[key] != null && _timetable[key]!.subject == subjectToDelete.subject).toList();
+    final keysToRemove = _timetable.keys
+        .where((key) =>
+            _timetable[key] != null &&
+            _timetable[key]!.subject == subjectToDelete.subject)
+        .toList();
 
     for (final key in keysToRemove) {
       _timetable[key] = null;
@@ -157,7 +160,6 @@ class TimetableProvider extends ChangeNotifier {
       await onTimetableUpdate!();
     }
   }
-
 
   /// ✅ 시간표 로드 (loadAllData에서 호출되도록 수정)
   Future<void> loadTimetable() async {
@@ -270,8 +272,7 @@ class ScheduleProvider extends ChangeNotifier {
 
       if (key.startsWith(examsPrefix)) {
         subjectNamePart = key.substring(examsPrefix.length);
-      }
-      else if (key.startsWith(assignmentsPrefix)) {
+      } else if (key.startsWith(assignmentsPrefix)) {
         subjectNamePart = key.substring(assignmentsPrefix.length);
       }
 
@@ -331,20 +332,20 @@ class ScheduleProvider extends ChangeNotifier {
     // 날짜별로 정렬 (미래 일정이 먼저 오도록 - 오름차순)
     loadedExams.sort((a, b) {
       final dateA = DateTime.tryParse(
-          (a['examDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+              (a['examDate'] as String? ?? '').replaceAll(' ', 'T')) ??
           DateTime(9999);
       final dateB = DateTime.tryParse(
-          (b['examDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+              (b['examDate'] as String? ?? '').replaceAll(' ', 'T')) ??
           DateTime(9999);
       return dateA.compareTo(dateB);
     });
     // 과제 정렬 로직
     loadedAssignments.sort((a, b) {
       final dateA = DateTime.tryParse(
-          (a['dueDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+              (a['dueDate'] as String? ?? '').replaceAll(' ', 'T')) ??
           DateTime(9999);
       final dateB = DateTime.tryParse(
-          (b['dueDate'] as String? ?? '').replaceAll(' ', 'T')) ??
+              (b['dueDate'] as String? ?? '').replaceAll(' ', 'T')) ??
           DateTime(9999);
       return dateA.compareTo(dateB);
     });
