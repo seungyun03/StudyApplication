@@ -13,6 +13,8 @@ import 'package:study_app/FrontEnd/TimeTablebutton.dart';
 import '../Providers/TimetableProvider.dart' as tp;
 // 💡 [추가] 설정 페이지로 이동하기 위한 import 및 alias
 import 'package:study_app/FrontEnd/Settings/SettingsPage.dart' as sp;
+// 🚨 [추가] TimeTableSelectionPage로 이동하기 위한 import
+import 'TimeTableSelectionPage.dart';
 
 // 💡 [추가 시작] ISO weekday를 한국어 요일로 변환하는 헬퍼 함수
 String _getKoreanDay(int weekday) {
@@ -135,35 +137,45 @@ class _HeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "시간표",
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: Color(0xFF1F2937),
+    // 💡 수정: Row 전체를 GestureDetector로 감싸서 탭 이벤트를 처리합니다.
+    return GestureDetector(
+      onTap: () {
+        // 🚨 핵심 수정: TimeTableSelectionPage로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TimeTableSelectionPage()),
+        );
+      },
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "시간표",
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: Color(0xFF1F2937),
+                ),
               ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              "2024년 1학기",
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontWeight: FontWeight.normal,
-                fontSize: 15.8,
-                color: Color(0xFF6B7280),
+              SizedBox(height: 6),
+              Text(
+                "2024년 1학기",
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.normal,
+                  fontSize: 15.8,
+                  color: Color(0xFF6B7280),
+                ),
               ),
-            ),
-          ],
-        ),
-        Icon(Icons.chevron_right, color: Colors.grey, size: 28),
-      ],
+            ],
+          ),
+          Icon(Icons.chevron_right, color: Colors.grey, size: 28),
+        ],
+      ),
     );
   }
 }
@@ -1033,17 +1045,14 @@ class WeeklyTimetableWidget extends StatelessWidget {
                                               style: TextStyle(
                                                 color: cellSubject.textColor,
                                                 fontWeight: FontWeight.bold,
-                                                fontSize: 12, // 크기 조정
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                             Text(
                                               cellSubject.room,
                                               style: TextStyle(
                                                 color: cellSubject.roomColor,
-                                                fontSize: 11, // 크기 조정
+                                                fontSize: 13,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ],
                                         ),
