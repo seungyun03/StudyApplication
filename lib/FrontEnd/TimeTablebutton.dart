@@ -1,4 +1,4 @@
-// 📄 TimeTableButton.dart (수정 완료 버전: D-Day 표시 추가)
+// 📄 TimeTableButton.dart (수정 완료 버전: D-Day 표시 및 autoOpenLatestFile 추가)
 // ===================================================================
 
 import 'package:flutter/material.dart';
@@ -19,12 +19,16 @@ class TimeTableButton extends StatefulWidget {
   final String subjectName;
   // 💡 추가: homepage에서 전달받은 시험/과제 데이터
   final Map<String, dynamic>? initialItemData;
+  // 💡 [추가] 더블 탭 시 자동 파일 열림 플래그 (누락된 named parameter 정의)
+  final bool autoOpenLatestFile; // <--- 추가된 변수
 
   const TimeTableButton({
     super.key,
     required this.subjectName,
     // 💡 필드 초기화
     this.initialItemData,
+    // 💡 [추가] 필드 초기화
+    this.autoOpenLatestFile = false, // <--- 추가된 생성자 매개변수
   });
 
   @override
@@ -57,7 +61,57 @@ class _TimeTableButtonState extends State<TimeTableButton> {
           _handleInitialItemTap(widget.initialItemData!);
         });
       }
+      // 💡 [추가] autoOpenLatestFile이 true인 경우, 가장 최근 파일 열기 시도
+      if (widget.autoOpenLatestFile && lectures.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _openLatestFile();
+        });
+      }
     }); // 💡 위젯 초기화 시 저장된 데이터 로드
+  }
+
+  // 💡 [추가] 강의 자료 중 가장 최근 파일을 찾는 로직
+
+  void _openLatestFile() {
+    // 1. 모든 강의 항목에서 파일 목록을 추출
+    final List<Map<String, String>> allFiles = lectures
+        .expand((lecture) =>
+            (lecture['files'] as List?)
+                ?.map((item) => Map<String, String>.from(item))
+                .toList() ??
+            <Map<String, String>>[]) // 💡 수정: 빈 리스트에 명시적으로 타입 지정하여 오류 해결
+        .toList();
+
+    if (allFiles.isEmpty) return;
+
+    // 2. 파일 목록을 'date' 기준으로 정렬 (최신 파일이 가장 위로)
+    allFiles.sort((a, b) {
+      // 날짜가 없는 파일은 1900년으로 간주하여 정렬에서 밀려나게 함
+      final DateTime aDate =
+          DateTime.tryParse(a['date'] ?? '') ?? DateTime(1900);
+      final DateTime bDate =
+          DateTime.tryParse(b['date'] ?? '') ?? DateTime(1900);
+      // 내림차순 정렬: 최신 날짜(값이 큰)가 앞으로
+      return bDate.compareTo(aDate);
+    });
+
+    // 3. 가장 최근 파일 열기
+    final latestFile = allFiles.first;
+    final filePath = latestFile['path'];
+
+    if (filePath != null && filePath.isNotEmpty) {
+      // 💡 open_filex를 이용해 파일 열기
+      OpenFilex.open(filePath).then((result) {
+        if (result.type != ResultType.done) {
+          // 파일 열기 실패 시 스낵바 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("최근 파일 열기 실패: ${result.message}")));
+        } else {
+          // 성공 시 로그 또는 간단한 알림 가능
+          // print("Latest file opened successfully: ${latestFile['name']}");
+        }
+      });
+    }
   }
 
   // 💡 초기 항목 탭 처리 함수: homepage에서 넘어온 항목을 찾아 수정 페이지를 띄움

@@ -1,19 +1,15 @@
-// 📄 homepage.dart (최종 코드 - UI 디자인 유지)
+// 📄 homepage.dart (더블 탭, 금요일까지 표시, 스크롤 기능 구현 완료)
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // HapticFeedback 사용을 위한 import
 import 'package:provider/provider.dart';
 
-// 💡 (수정) EditingPageParents에 'as ep' prefix를 사용하여 클래스 이름 충돌을 확실하게 해결
 import 'package:study_app/FrontEnd/EditingPageParents.dart' as ep;
-
-// 💡 (수정) FullTimeTable에 'as ft' prefix를 사용하여 'FullTimeTable' isn't a class 오류를 해결
 import 'package:study_app/FrontEnd/FullTimeTable.dart' as ft;
 
 import 'package:study_app/FrontEnd/TimeTablebutton.dart';
 import '../Providers/TimetableProvider.dart' as tp;
-// 💡 [추가] 설정 페이지로 이동하기 위한 import 및 alias
 import 'package:study_app/FrontEnd/Settings/SettingsPage.dart' as sp;
-// 🚨 [추가] TimeTableSelectionPage로 이동하기 위한 import
 import 'TimeTableSelectionPage.dart';
 
 // 💡 [추가 시작] ISO weekday를 한국어 요일로 변환하는 헬퍼 함수
@@ -66,11 +62,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // ScheduleProvider 생성자에서 이미 loadAllSchedules()를 호출하므로,
     // 여기서의 중복 호출은 제거합니다.
-    /*
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<tp.ScheduleProvider>(context, listen: false).loadAllSchedules();
-    });
-    */
   }
 
   // 💡 _openEditingPage 함수 내에서도 접두사(ep.)를 사용하도록 수정
@@ -81,9 +72,6 @@ class _HomePageState extends State<HomePage> {
     );
     if (mounted) {
       setState(() {}); // 기존 새로고침
-      // 💡 수정: EditingPageParents에서 setAll을 통해 스케줄 업데이트가 트리거됩니다.
-      // Provider.of<tp.ScheduleProvider>(context, listen: false)
-      //     .loadAllSchedules();
     }
   }
 
@@ -97,12 +85,10 @@ class _HomePageState extends State<HomePage> {
     final allAssignments = scheduleProvider.allAssignments;
     final isLoading = scheduleProvider.isLoading;
 
-    // 기존 timetable 구독은 WeeklyTimetableWrapper에서 사용됨
-    // final timetable = context.watch<tp.TimetableProvider>().timetable;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
+        // 🚨 전체 페이지 스크롤 가능
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
@@ -207,8 +193,6 @@ class _TopCardsRow extends StatelessWidget {
       }
 
       // TimeTableButton으로 이동하며 데이터 전달
-      // 💡 수정: subjectName은 이미 TimetableProvider.dart에서 '과목명'만 저장되도록 처리되었습니다.
-      // 💡 따라서 TimeTableButton의 요구사항에 맞춰 '과목명'만 전달합니다.
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -216,15 +200,14 @@ class _TopCardsRow extends StatelessWidget {
             subjectName: subjectName, // 💡 과목명만 전달
             // 💡 추가: 탭된 항목의 상세 데이터와 타입을 전달하여 TimeTableButton에서 처리하도록 합니다.
             initialItemData: item,
+            // 💡 [추가] 시험/과제 카드 클릭 시 파일 자동 열림은 비활성화 (기본값 false)
+            autoOpenLatestFile: false,
           ),
         ),
       );
-      // 돌아왔을 때 새로고침 (homepage의 기존 로직)
+      // 돌아왔을 때 새로고침
       if (context.mounted) {
-        // 기존 새로고침 로직
-        // 💡 수정: EditingPageParents에서 setAll 호출 후 콜백을 통해 로드되므로 명시적 호출 대신 wait
-        // Provider.of<tp.ScheduleProvider>(context, listen: false)
-        //     .loadAllSchedules();
+        // ScheduleProvider의 loadAllSchedules()는 Provider 내부에서 호출됨
       }
     }
 
@@ -326,9 +309,9 @@ class AssignmentScheduleWidget extends StatelessWidget {
           // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
           final dueDate = DateTime.tryParse(dueDateStr.replaceAll(' ', 'T'));
 
+          // 💡 수정: dueDate가 null이 아니고, 마감일이 현재 시간보다 이후인 경우만 필터링하여 '다가오는' 과제만 표시
           // D+ 표시를 위해 기한이 지난 과제도 필터링하지 않고, D-Day 계산 함수에 맡깁니다.
           // 하지만 homepage에서는 *남은* 항목을 보여주는 것이 목적이므로, 과거는 제외합니다.
-          // 💡 수정:dueDate가 null이 아니고, 마감일이 현재 시간보다 이후인 경우만 필터링하여 '다가오는' 과제만 표시
           return dueDate != null && !dueDate.isBefore(now);
         })
         .take(3)
@@ -455,7 +438,6 @@ class _CardWrapper extends StatelessWidget {
         : const Color(0xFF1F2937); // 날짜/시간은 일반 텍스트 색상
 
     // 💡 수정 시작: 과목명 및 시험 장소 정보 추출 및 표시 방식 결정
-    // subjectName은 ScheduleProvider에서 '과목명'만 저장하도록 처리되었음.
     final String courseName = subjectName;
 
     // 💡 수정: 'examLocation' 키에서 실제 시험 장소를 가져옵니다.
@@ -473,6 +455,8 @@ class _CardWrapper extends StatelessWidget {
       // 💡 탭 이벤트 처리: onItemTap 콜백 실행
       onTap: () {
         if (onItemTap != null) {
+          // 💡 탭 시 햅틱 피드백 추가
+          HapticFeedback.lightImpact();
           onItemTap!(item);
         }
       },
@@ -617,53 +601,53 @@ class CurrentClassBanner extends StatefulWidget {
 
 class _CurrentClassBannerState extends State<CurrentClassBanner> {
   // FullTimeTable.dart를 참고하여 23시 수업(24시 종료)까지 반영
-  final List<String> _times = const [
+  final List<String> _times = [
     "9:00",
     "10:00",
     "11:00",
     "12:00",
     "13:00",
     "14:00",
-    "15:00", // 💡 추가
-    "16:00", // 💡 추가
-    "17:00", // 💡 추가
-    "18:00", // 💡 추가
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
     "19:00", // 💡 추가
     "20:00", // 💡 추가
     "21:00", // 💡 추가
     "22:00", // 💡 추가
-    "23:00" // 💡 추가 (24:00까지 반영)
+    "23:00" // 💡 추가
   ];
 
-  // 현재 시간과 요일을 기준으로 진행 중인 강의를 찾는 함수
+  // 💡 현재 진행 중인 강의를 찾는 로직
+  // 🚨 [오류 수정] timetable의 타입을 Map<String, tp.SubjectInfo>에서 Map<String, tp.SubjectInfo?>로 변경
   tp.SubjectInfo? _findCurrentClass(Map<String, tp.SubjectInfo?> timetable) {
     final now = DateTime.now();
     final currentDay = _getKoreanDay(now.weekday);
     final currentHour = now.hour;
+    final currentMinute = now.minute;
 
     // 1. 주말 체크
     if (currentDay == '토' || currentDay == '일') {
       return null;
     }
 
-    // 2. 운영 시간 체크 (9시 이전 또는 24시 이후)
-    // 23시 수업은 23:00부터 23:59까지 진행되므로, currentHour > 23은 종료를 의미합니다.
+    // 2. 강의가 없는 시간대 체크 (0시~9시 이전, 24시 이후)
+    // 💡 24시까지 반영을 위해 24시 (0시)는 제외하고 23시까지
     if (currentHour < 9 || currentHour > 23) {
-      // 💡 18 -> 24(23:59) 반영을 위해 23 초과로 변경
       return null;
     }
 
     // 3. 현재 시간에 맞는 수업 슬롯 검색
     for (final startTimeStr in _times) {
       final startHour = int.parse(startTimeStr.split(':')[0]);
-
-      // 현재 시간이 강의 시작 시간과 일치하는 경우 (예: 현재 10시 -> 10:00 수업 확인)
+      // 현재 시각이 강의 시작 시간과 일치하는 경우 (예: 현재 10시 -> 10:00 수업 확인)
+      // 💡 현재 시각이 00분이라면 다음 수업이 1시간 뒤에 시작하므로,
+      // 현재 수업은 이미 시작한 수업 (startHour == currentHour)이어야 합니다.
       if (currentHour == startHour) {
         // 시간표 키는 "요일-시간" 형식 (예: "월-9:00")
         final key = "$currentDay-$startTimeStr";
-
         final subjectInfo = timetable[key];
-
         // 과목 정보가 있고, 과목명이 비어있지 않은 경우
         if (subjectInfo != null && subjectInfo.subject.isNotEmpty) {
           return subjectInfo;
@@ -676,6 +660,7 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
   @override
   Widget build(BuildContext context) {
     // TimetableProvider에서 시간표 데이터를 가져옵니다.
+    // Provider의 timetable 타입이 Map<String, tp.SubjectInfo?>임을 예상하고 코드를 사용합니다.
     final timetable = context.watch<tp.TimetableProvider>().timetable;
     final currentClass = _findCurrentClass(timetable);
 
@@ -683,6 +668,8 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
     void _handleTap() {
       if (currentClass != null) {
         final subjectName = currentClass.subject;
+        // 💡 탭 시 햅틱 피드백 추가
+        HapticFeedback.lightImpact();
         // TimeTableButton 페이지로 이동
         Navigator.push(
           context,
@@ -690,6 +677,8 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
             builder: (_) => TimeTableButton(
               subjectName: subjectName, // 과목명 전달
               initialItemData: null, // 현재 강의 클릭은 특정 과제/시험을 가리키지 않으므로 null
+              // 💡 [추가] 현재 강의 클릭 시 파일 자동 열림 활성화 (Double-tap 효과)
+              autoOpenLatestFile: true,
             ),
           ),
         );
@@ -697,7 +686,8 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
     }
 
     return InkWell(
-      onTap: currentClass != null ? _handleTap : null, // 강의가 있을 때만 탭 가능
+      // 💡 강의가 있을 때만 탭 가능
+      onTap: currentClass != null ? _handleTap : null,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -711,18 +701,9 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
                 color: Colors.black12, offset: Offset(0, 1), blurRadius: 2),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center, // 중앙 정렬 대신 내용 정렬에 집중
-          children: [
-            // 현재 진행 중인 강의 헤더는 생략하고 내용만 간결하게 표시 (기존 위젯 높이 유지)
-            if (currentClass != null)
-              _CurrentClassInfo(
-                  subject: currentClass, currentHour: DateTime.now().hour)
-            else
-              const _NoCurrentClassInfo(),
-          ],
-        ),
+        child: currentClass != null
+            ? _CurrentClassInfo(subject: currentClass) // 현재 강의 정보 표시
+            : const _NoCurrentClassInfo(), // 현재 강의 없음 표시
       ),
     );
   }
@@ -731,65 +712,73 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
 // 💡 [추가] 현재 강의 정보 표시 위젯
 class _CurrentClassInfo extends StatelessWidget {
   final tp.SubjectInfo subject;
-  final int currentHour;
 
-  const _CurrentClassInfo({required this.subject, required this.currentHour});
+  const _CurrentClassInfo({required this.subject});
+
+  // 강의 시간 계산 (9:00 ~ 9:50 등으로 표시)
+  String _getTimeRange() {
+    final now = DateTime.now();
+    final currentHour = now.hour;
+
+    String start = '$currentHour:00';
+    String end = '${currentHour}:50'; // 일반적인 강의는 50분 진행 가정
+
+    // 💡 23:00 수업인 경우 종료 시간을 24:00으로 표시
+    if (currentHour == 23) {
+      end = '24:00';
+    }
+
+    return '$start ~ $end';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final nextHour = currentHour + 1; // 수업 종료 시간
-    final timeRange =
-        '${currentHour.toString().padLeft(2, '0')}:00 - ${nextHour.toString().padLeft(2, '0')}:00';
-    final location = subject.room.isNotEmpty ? subject.room : '강의실 정보 없음';
+    final timeRange = _getTimeRange();
+    final location = subject.room;
 
-    // 🚨 [UI 유지] 현재 강의 위젯의 디자인을 그대로 유지
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Icon(Icons.school, color: Color(0xFF3B82F6), size: 28),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  subject.subject, // 과목명
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                    color: Color(0xFF1F2937),
+    return Row(
+      children: [
+        const Icon(Icons.access_time_filled,
+            color: Color(0xFF3B82F6), size: 28),
+        const SizedBox(width: 15),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                subject.subject, // 과목명
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  color: Color(0xFF1F2937),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    timeRange, // 시간대
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      timeRange, // 시간대
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                      ),
+                  const Text(' | ', style: TextStyle(color: Color(0xFF9CA3AF))),
+                  Text(
+                    location, // 강의실
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
                     ),
-                    const Text(' | ',
-                        style: TextStyle(color: Color(0xFF9CA3AF))),
-                    Text(
-                      location, // 강의실
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -802,7 +791,7 @@ class _NoCurrentClassInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final currentDay = _getKoreanDay(now.weekday);
-    final currentHour = now.hour; // 💡 currentHour 추가
+    final currentHour = now.hour;
 
     String message;
     if (currentDay == '토' || currentDay == '일') {
@@ -819,63 +808,157 @@ class _NoCurrentClassInfo extends StatelessWidget {
       message = "현재 진행 중인 수업이 없습니다. ☕";
     }
 
-    // 🚨 [UI 유지] 현재 강의 없음 위젯의 디자인을 그대로 유지
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Text(
+    // 🚨 [UI 유지] 현재 강의 없음 위젯의 디자인
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.schedule, color: Colors.grey.shade400, size: 28),
+            const SizedBox(width: 15),
+            Text(
+              "현재 수업",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Colors.grey.shade400,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
           message,
-          style: const TextStyle(
-            fontFamily: 'Roboto',
-            fontWeight: FontWeight.w500,
-            fontSize: 16,
-            color: Color(0xFF9CA3AF),
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade500,
           ),
         ),
-      ),
+      ],
     );
   }
 }
 // 💡 [수정 끝]
 
-// ==================== 주간 시간표 (Provider 적용) ====================
-class _WeeklyTimetableWrapper extends StatelessWidget {
+// ==================== [수정됨] 주간 시간표 ====================
+class _WeeklyTimetableWrapper extends StatefulWidget {
   const _WeeklyTimetableWrapper();
 
   @override
-  Widget build(BuildContext context) {
-    final timetable = context.watch<tp.TimetableProvider>().timetable;
-    return WeeklyTimetableWidget(timetable: timetable);
-  }
+  State<_WeeklyTimetableWrapper> createState() =>
+      _WeeklyTimetableWrapperState();
 }
 
-// ==================== 주간 시간표 ====================
-class WeeklyTimetableWidget extends StatelessWidget {
-  final Map<String, tp.SubjectInfo?> timetable;
+class _WeeklyTimetableWrapperState extends State<_WeeklyTimetableWrapper> {
+  // 💡 [수정] 요일 헤더 데이터: 금요일까지만 표시
+  final List<String> days = ['월', '화', '수', '목', '금'];
 
-  const WeeklyTimetableWidget({super.key, required this.timetable});
+  // FullTimeTable.dart를 참고하여 23시 수업(24시 종료)까지 반영
+  final List<String> _times = [
+    "9:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00", // 💡 추가
+    "20:00", // 💡 추가
+    "21:00", // 💡 추가
+    "22:00", // 💡 추가
+    "23:00" // 💡 추가
+  ];
+
+  // 💡 요일 + 시간 문자열을 기반으로 SubjectInfo를 가져오는 헬퍼 함수
+  // 🚨 [오류 수정] timetable의 타입을 Map<String, tp.SubjectInfo>에서 Map<String, tp.SubjectInfo?>로 변경
+  tp.SubjectInfo? _getSubject(
+      String day, String time, Map<String, tp.SubjectInfo?> timetable) {
+    return timetable['$day-$time'];
+  }
+
+  // 💡 시간표 셀 위젯 (클릭 기능 포함)
+  Widget _buildTimetableCell(
+      BuildContext context, tp.SubjectInfo? cellSubject) {
+    return Expanded(
+      child: GestureDetector(
+        // 1. [추가] 더블 탭: TimeTableButton 페이지 이동 및 최신 파일 자동 열림
+        onDoubleTap: () {
+          if (cellSubject != null && cellSubject.subject.isNotEmpty) {
+            // 💡 더블 탭 시 강력한 햅틱 피드백 추가
+            HapticFeedback.mediumImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TimeTableButton(
+                  subjectName: cellSubject.subject,
+                  autoOpenLatestFile: true, // 더블 탭
+                ),
+              ),
+            );
+          }
+        },
+        // 2. [수정] 단일 탭: TimeTableButton 페이지로 이동 (파일 자동 열림 X)
+        onTap: () {
+          if (cellSubject != null && cellSubject.subject.isNotEmpty) {
+            // 💡 탭 시 햅틱 피드백 추가
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TimeTableButton(
+                  subjectName: cellSubject.subject,
+                  autoOpenLatestFile: false, // 단일 탭
+                ),
+              ),
+            );
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          height: 50,
+          decoration: BoxDecoration(
+            color: cellSubject?.bgColor ?? const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          alignment: Alignment.center,
+          child: (cellSubject == null || cellSubject.subject.isEmpty)
+              ? const SizedBox.shrink()
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      cellSubject.subject,
+                      style: TextStyle(
+                        color: cellSubject.textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14, // 폰트 크기 조정
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      cellSubject.room,
+                      style: TextStyle(
+                        color: cellSubject.roomColor,
+                        fontSize: 11, // 폰트 크기 조정
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final days = ["월", "화", "수", "목", "금"];
-    // 💡 수정: 24시까지 반영을 위해 시간표 범위 23:00까지 확장 (스크롤 가능)
-    final times = [
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00",
-      "13:00",
-      "14:00",
-      "15:00", // 💡 추가
-      "16:00", // 💡 추가
-      "17:00", // 💡 추가
-      "18:00", // 💡 추가
-      "19:00", // 💡 추가
-      "20:00", // 💡 추가
-      "21:00", // 💡 추가
-      "22:00", // 💡 추가
-      "23:00" // 💡 추가
-    ];
+    // 💡 Provider에서 시간표 데이터 가져오기
+    final timetable = context.watch<tp.TimetableProvider>().timetable;
 
     // 🚨 [UI 유지] 주간 시간표 위젯의 디자인(컨테이너, 헤더, 목록)을 그대로 유지
     return Container(
@@ -909,11 +992,13 @@ class WeeklyTimetableWidget extends StatelessWidget {
                   GestureDetector(
                     onTap: () {
                       // 💡 수정: FullTimeTable isn't a class 오류 해결을 위해 prefix (ft.) 사용
+                      HapticFeedback.lightImpact();
                       Navigator.push(
                         context,
                         // 🚨 핵심 수정: ft. prefix 사용
                         MaterialPageRoute(
-                            builder: (_) => const ft.FullTimeTable()),
+                          builder: (_) => const ft.FullTimeTable(),
+                        ),
                       );
                     },
                     child: const Text(
@@ -928,11 +1013,13 @@ class WeeklyTimetableWidget extends StatelessWidget {
                   GestureDetector(
                     onTap: () {
                       // 💡 수정: EditingPageParents에 prefix (ep.) 사용
+                      HapticFeedback.lightImpact();
                       Navigator.push(
                         context,
                         // 🚨 핵심 수정: ep. prefix 사용
                         MaterialPageRoute(
-                            builder: (_) => const ep.EditingPageParents()),
+                          builder: (_) => const ep.EditingPageParents(),
+                        ),
                       );
                     },
                     child: const Text(
@@ -948,118 +1035,57 @@ class WeeklyTimetableWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
           // 요일 헤더
           Row(
             children: [
               const SizedBox(width: 60),
+              // 💡 [수정] days 리스트를 사용 (월-금만 포함)
               for (final d in days)
                 Expanded(
-                  child: Center(
-                    child: Text(
-                      d,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF4B5563),
-                      ),
+                    child: Center(
+                  child: Text(
+                    d,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Color(0xFF1F2937),
                     ),
                   ),
-                ),
+                )),
             ],
           ),
           const SizedBox(height: 8),
-
-          // 💡 수정: Expanded와 ListView.builder를 사용하여 스크롤 가능하도록 변경
+          // 시간표 내용
           SizedBox(
-            height: 340, // 적절한 높이 설정
+            // 💡 높이를 5개 행 기준으로 고정하여 시각적으로 안정화
+            height: 50.0 * 5 + 32, // 약 282.0
             child: ListView.builder(
-              physics: const ClampingScrollPhysics(), // 스크롤 물리 효과
-              itemCount: times.length,
-              itemBuilder: (context, index) {
-                final t = times[index];
+              // 💡 [수정] 스크롤 가능하도록 physics 제거 (기본값 AllowScroll)
+              itemCount: _times.length, // 💡 [수정] 전체 시간 슬롯 표시 (24시까지 스크롤)
+              itemBuilder: (context, timeIndex) {
+                final time = _times[timeIndex];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Row(
                     children: [
+                      // 시간대 표시
                       SizedBox(
                         width: 60,
                         child: Text(
-                          t,
+                          time,
                           style: const TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 13.8,
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                      for (final d in days)
-                        Builder(
-                          builder: (context) {
-                            final cellSubject = timetable["$d-$t"];
-                            // 🚨 [UI 유지] 시간표 버튼(셀)의 디자인을 그대로 유지
-                            return Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (cellSubject == null ||
-                                      cellSubject.subject.isEmpty) {
-                                    // 💡 빈 셀 탭 시 수정 페이지로 이동
-                                    Navigator.push(
-                                      context,
-                                      // 🚨 핵심 수정: ep. prefix 사용
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const ep.EditingPageParents()),
-                                    );
-                                  } else {
-                                    // 💡 강의 셀 탭 시 TimeTableButton으로 이동
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => TimeTableButton(
-                                          subjectName: cellSubject.subject,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 4),
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: cellSubject?.bgColor ??
-                                        const Color(0xFFF9FAFB),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border:
-                                        Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: (cellSubject == null ||
-                                          cellSubject.subject.isEmpty)
-                                      ? const SizedBox.shrink()
-                                      : Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              cellSubject.subject,
-                                              style: TextStyle(
-                                                color: cellSubject.textColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Text(
-                                              cellSubject.room,
-                                              style: TextStyle(
-                                                color: cellSubject.roomColor,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                ),
-                              ),
-                            );
-                          },
+                      // 요일별 시간표 셀
+                      // 💡 [수정] days 리스트 (월-금) 사용
+                      for (final day in days)
+                        _buildTimetableCell(
+                          context,
+                          _getSubject(day, time, timetable),
                         ),
                     ],
                   ),
@@ -1072,6 +1098,7 @@ class WeeklyTimetableWidget extends StatelessWidget {
     );
   }
 }
+// 💡 [수정 끝]
 
 // ==================== 하단 네비게이션 ====================
 class BottomNavigationBarWidget extends StatelessWidget {
@@ -1080,31 +1107,39 @@ class BottomNavigationBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 65,
+      height: 70,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
       ),
       child: Row(
-        // 💡 const 제거 (동적인 onTap 핸들러를 사용하기 위해)
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // 커뮤니티
-          _NavItem(
-            icon: Icons.forum_outlined,
-            label: "커뮤니티",
-            active: false,
-            onTap: () {
-              /* Navigator.push(context, MaterialPageRoute(builder: (_) => const CommunityPage())); */
-            },
-          ),
           // 홈
           _NavItem(
             icon: Icons.home,
             label: "홈",
             active: true,
             onTap: () {
-              // 현재 페이지이므로 아무것도 하지 않음.
+              // 💡 탭 시 햅틱 피드백 추가
+              HapticFeedback.lightImpact();
+              // 현재 페이지이므로 아무 작업도 하지 않음
+            },
+          ),
+          // 시간표 수정
+          _NavItem(
+            icon: Icons.edit_calendar_outlined,
+            label: "시간표 수정",
+            active: false,
+            onTap: () {
+              // 💡 탭 시 햅틱 피드백 추가
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ep
+                        .EditingPageParents()), // 💡 ep.EditingPageParents로 이동
+              );
             },
           ),
           // 설정 - [수정] settings_page.dart로 이동하는 기능 추가
@@ -1113,6 +1148,8 @@ class BottomNavigationBarWidget extends StatelessWidget {
             label: "설정",
             active: false,
             onTap: () {
+              // 💡 탭 시 햅틱 피드백 추가
+              HapticFeedback.lightImpact();
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -1153,10 +1190,9 @@ class _NavItem extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 13.8,
+              fontSize: 12,
               color: active ? Colors.blue : Colors.grey,
-              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
