@@ -12,6 +12,147 @@ import '../Providers/TimetableProvider.dart' as tp;
 import 'package:study_app/FrontEnd/Settings/SettingsPage.dart' as sp;
 import 'TimeTableSelectionPage.dart';
 
+// ==================== [추가] SettingsPage.dart에서 복사한 상수 및 위젯 ====================
+
+// 색상 정의 (Tailwind CSS hex codes to Flutter Color)
+class AppColors {
+  static const Color background = Color(0xFFF9FAFB);
+  static const Color primaryText = Color(0xFF111827);
+  static const Color secondaryText = Color(0xFF6B7280);
+  static const Color primaryBrand = Color(0xFF2563EB);
+  static const Color primaryBrandBg = Color(0xFFDBEAFE);
+  static const Color border = Color(0xFFF3F4F6);
+  static const Color chevron = Color(0xFF9CA3AF);
+}
+
+// 아이콘 매핑 (Lucide Icons to Material Icons)
+class LucideIcons {
+  static const IconData user = Icons.person_outline;
+  static const IconData lock = Icons.lock_outline;
+  static const IconData bell = Icons.notifications_none;
+  static const IconData helpCircle = Icons.help_outline;
+  static const IconData info = Icons.info_outline;
+  static const IconData messageCircle = Icons.message_outlined;
+  static const IconData home = Icons.home_outlined;
+  static const IconData settings = Icons.settings_outlined;
+  static const IconData chevronRight = Icons.chevron_right;
+  static const IconData keyIcon = Icons.vpn_key_outlined;
+  // 💡 [추가] 시간표 수정 아이콘 (homepage에서 사용됨)
+  static const IconData editCalendar = Icons.edit_calendar_outlined;
+}
+
+
+// NavItem 위젯 (Bottom Navigation Bar 항목) - SettingsPage.dart의 NavItem과 동일
+class NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  const NavItem({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.active,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      // 탭 가능하도록 InkWell로 감싸기
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon,
+                color: active ? AppColors.primaryBrand : AppColors.chevron,
+                size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 13.8,
+                color:
+                active ? AppColors.primaryBrand : AppColors.secondaryText,
+                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Bottom Navigation Bar 위젯 - SettingsPage.dart의 BottomNavigationBarWidget과 동일하게 수정
+class BottomNavigationBarWidget extends StatelessWidget {
+  const BottomNavigationBarWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 65, // 높이 70 -> 65로 변경 (SettingsPage와 동일)
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.border, width: 1)), // 색상 변경
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, -2),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // 커뮤니티 (기능 없음)
+          NavItem(
+            icon: LucideIcons.messageCircle,
+            label: "커뮤니티",
+            active: false,
+            onTap: () {
+              HapticFeedback.lightImpact(); // 햅틱 피드백 추가
+            },
+          ),
+          // 홈 (현재 페이지)
+          NavItem(
+            icon: LucideIcons.home,
+            label: "홈",
+            active: true, // 현재 페이지이므로 true
+            onTap: () {
+              HapticFeedback.lightImpact(); // 햅틱 피드백 추가
+              // 현재 페이지이므로 아무것도 하지 않음.
+            },
+          ),
+          // 설정 (SettingsPage로 이동)
+          NavItem(
+            icon: LucideIcons.settings,
+            label: "설정",
+            active: false,
+            onTap: () {
+              HapticFeedback.lightImpact(); // 햅틱 피드백 추가
+              // SettingsPage로 이동
+              Navigator.pushReplacement( // [수정] pushReplacement로 변경하여 이전 페이지 스택에서 제거
+                context,
+                MaterialPageRoute(builder: (context) => const sp.SettingsPage()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== [수정된 부분 끝] ====================
+
+
 // 💡 [추가 시작] ISO weekday를 한국어 요일로 변환하는 헬퍼 함수
 String _getKoreanDay(int weekday) {
   switch (weekday) {
@@ -112,6 +253,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+      // 💡 [수정] 기존의 BottomNavigationBarWidget 대신 SettingsPage의 스타일로 대체
       bottomNavigationBar: const BottomNavigationBarWidget(),
     );
   }
@@ -256,15 +398,15 @@ class ExamScheduleWidget extends StatelessWidget {
     final now = DateTime.now();
     final upcomingExams = exams
         .where((exam) {
-          final examDateStr = exam['examDate'] as String?;
-          if (examDateStr == null || examDateStr.isEmpty) return false;
+      final examDateStr = exam['examDate'] as String?;
+      if (examDateStr == null || examDateStr.isEmpty) return false;
 
-          // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-          final examDate = DateTime.tryParse(examDateStr.replaceAll(' ', 'T'));
+      // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
+      final examDate = DateTime.tryParse(examDateStr.replaceAll(' ', 'T'));
 
-          // 오늘 날짜 포함 및 미래 시험만 표시 (종료되지 않은 항목)
-          return examDate != null && !examDate.isBefore(now);
-        })
+      // 오늘 날짜 포함 및 미래 시험만 표시 (종료되지 않은 항목)
+      return examDate != null && !examDate.isBefore(now);
+    })
         .take(3) // 💡 시험 항목도 3개까지만 표시
         .toList();
 
@@ -300,20 +442,20 @@ class AssignmentScheduleWidget extends StatelessWidget {
     final now = DateTime.now();
     final pendingAssignments = assignments
         .where((a) {
-          final isSubmitted = (a['submitted'] ?? false) == true;
-          if (isSubmitted) return false; // 제출 완료 항목은 제외
+      final isSubmitted = (a['submitted'] ?? false) == true;
+      if (isSubmitted) return false; // 제출 완료 항목은 제외
 
-          final dueDateStr = a['dueDate'] as String?;
-          if (dueDateStr == null || dueDateStr.isEmpty) return false;
+      final dueDateStr = a['dueDate'] as String?;
+      if (dueDateStr == null || dueDateStr.isEmpty) return false;
 
-          // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
-          final dueDate = DateTime.tryParse(dueDateStr.replaceAll(' ', 'T'));
+      // 💡 수정: 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
+      final dueDate = DateTime.tryParse(dueDateStr.replaceAll(' ', 'T'));
 
-          // 💡 수정: dueDate가 null이 아니고, 마감일이 현재 시간보다 이후인 경우만 필터링하여 '다가오는' 과제만 표시
-          // D+ 표시를 위해 기한이 지난 과제도 필터링하지 않고, D-Day 계산 함수에 맡깁니다.
-          // 하지만 homepage에서는 *남은* 항목을 보여주는 것이 목적이므로, 과거는 제외합니다.
-          return dueDate != null && !dueDate.isBefore(now);
-        })
+      // 💡 수정: dueDate가 null이 아니고, 마감일이 현재 시간보다 이후인 경우만 필터링하여 '다가오는' 과제만 표시
+      // D+ 표시를 위해 기한이 지난 과제도 필터링하지 않고, D-Day 계산 함수에 맡깁니다.
+      // 하지만 homepage에서는 *남은* 항목을 보여주는 것이 목적이므로, 과거는 제외합니다.
+      return dueDate != null && !dueDate.isBefore(now);
+    })
         .take(3)
         .toList();
 
@@ -357,7 +499,7 @@ class _CardWrapper extends StatelessWidget {
     try {
       // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
       final DateTime targetDateTime =
-          DateTime.parse(dateString.replaceAll(' ', 'T'));
+      DateTime.parse(dateString.replaceAll(' ', 'T'));
       final DateTime now = DateTime.now();
 
       // 시험 (isExam)이면서 이미 시간이 지난 경우
@@ -395,11 +537,11 @@ class _CardWrapper extends StatelessWidget {
     // 💡 수정: TimeTableButton.dart에서 subjectName이 저장되었다고 가정
     final String subjectName = item['subjectName'] as String? ?? '과목 정보 없음';
     final String titleText =
-        isExam ? (item['examName'] ?? '제목 없음') : (item['title'] ?? '제목 없음');
+    isExam ? (item['examName'] ?? '제목 없음') : (item['title'] ?? '제목 없음');
 
     // 'YYYY-MM-DD HH:mm' 형식의 날짜/시간 문자열
     final String dateString =
-        isExam ? (item['examDate'] ?? '') : (item['dueDate'] ?? '');
+    isExam ? (item['examDate'] ?? '') : (item['dueDate'] ?? '');
 
     // 💡 추가: D-Day 계산
     final String dDayString = _getDDayString(dateString, isExam: isExam);
@@ -431,10 +573,10 @@ class _CardWrapper extends StatelessWidget {
     // 💡 D-Day 색상 결정
     final Color rightTextColor = dDayString.isNotEmpty
         ? (dDayString == 'D-Day'
-            ? Colors.red.shade600 // D-Day는 빨간색
-            : (dDayString.startsWith('D+')
-                ? Colors.orange.shade600 // D+는 주황색 (지연된 과제)
-                : const Color(0xFF1F2937))) // D-N은 일반 텍스트 색상
+        ? Colors.red.shade600 // D-Day는 빨간색
+        : (dDayString.startsWith('D+')
+        ? Colors.orange.shade600 // D+는 주황색 (지연된 과제)
+        : const Color(0xFF1F2937))) // D-N은 일반 텍스트 색상
         : const Color(0xFF1F2937); // 날짜/시간은 일반 텍스트 색상
 
     // 💡 수정 시작: 과목명 및 시험 장소 정보 추출 및 표시 방식 결정
@@ -467,7 +609,7 @@ class _CardWrapper extends StatelessWidget {
           children: [
             Icon(isExam ? Icons.event_note : Icons.assignment,
                 color:
-                    isExam ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+                isExam ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
                 size: 16),
             const SizedBox(width: 8),
             Expanded(
@@ -530,7 +672,7 @@ class _CardWrapper extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: gradient),
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -554,35 +696,35 @@ class _CardWrapper extends StatelessWidget {
           Expanded(
             child: isLoading
                 ? Center(
-                    child: CircularProgressIndicator(
-                        color: gradient.first)) // 로딩 중 표시
+                child: CircularProgressIndicator(
+                    color: gradient.first)) // 로딩 중 표시
                 : items.isEmpty
-                    ? Center(
-                        // 항목이 없을 경우 빈 텍스트 표시
-                        child: Text(
-                          emptyText,
-                          style: TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: 14,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      )
-                    : // 💡 수정: 항목이 있을 경우 ListView.builder로 변경 (RenderFlex Overflow 방지)
-                    ListView.builder(
-                        // padding을 ListView에 적용
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 4.0, horizontal: 16.0),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          // 💡 ListView 내에서 아이템 하나씩 빌드
-                          return _buildItemRow(
-                            items[index],
-                            title == "시험",
-                            index,
-                          );
-                        },
-                      ),
+                ? Center(
+              // 항목이 없을 경우 빈 텍스트 표시
+              child: Text(
+                emptyText,
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 14,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            )
+                : // 💡 수정: 항목이 있을 경우 ListView.builder로 변경 (RenderFlex Overflow 방지)
+            ListView.builder(
+              // padding을 ListView에 적용
+              padding: const EdgeInsets.symmetric(
+                  vertical: 4.0, horizontal: 16.0),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                // 💡 ListView 내에서 아이템 하나씩 빌드
+                return _buildItemRow(
+                  items[index],
+                  title == "시험",
+                  index,
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -665,7 +807,7 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
 
     // 💡 [수정] type_not_assignable 오류 해결: 명시적으로 원하는 타입으로 캐스팅하여 전달합니다.
     final currentClass =
-        _findCurrentClass(timetable as Map<String, tp.SubjectInfo?>);
+    _findCurrentClass(timetable as Map<String, tp.SubjectInfo?>);
 
     // 💡 [추가] 탭 이동 기능: 단일 탭(false), 더블 탭(true)에 따라 autoOpenLatestFile 설정
     void _handleTap({required bool isDoubleTap}) {
@@ -699,7 +841,7 @@ class _CurrentClassBannerState extends State<CurrentClassBanner> {
       onTap: currentClass != null ? () => _handleTap(isDoubleTap: false) : null,
       // 💡 더블 탭: autoOpenLatestFile: true
       onDoubleTap:
-          currentClass != null ? () => _handleTap(isDoubleTap: true) : null,
+      currentClass != null ? () => _handleTap(isDoubleTap: true) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         height: 98, // 높이 고정 유지
@@ -940,27 +1082,27 @@ class _WeeklyTimetableWrapperState extends State<_WeeklyTimetableWrapper> {
           child: (cellSubject == null || cellSubject.subject.isEmpty)
               ? const SizedBox.shrink()
               : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      cellSubject.subject,
-                      style: TextStyle(
-                        color: cellSubject.textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14, // 폰트 크기 조정
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      cellSubject.room,
-                      style: TextStyle(
-                        color: cellSubject.roomColor,
-                        fontSize: 11, // 폰트 크기 조정
-                      ),
-                    ),
-                  ],
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                cellSubject.subject,
+                style: TextStyle(
+                  color: cellSubject.textColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14, // 폰트 크기 조정
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                cellSubject.room,
+                style: TextStyle(
+                  color: cellSubject.roomColor,
+                  fontSize: 11, // 폰트 크기 조정
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1054,15 +1196,15 @@ class _WeeklyTimetableWrapperState extends State<_WeeklyTimetableWrapper> {
               for (final d in days)
                 Expanded(
                     child: Center(
-                  child: Text(
-                    d,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                )),
+                      child: Text(
+                        d,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    )),
             ],
           ),
           const SizedBox(height: 8),
@@ -1102,108 +1244,6 @@ class _WeeklyTimetableWrapperState extends State<_WeeklyTimetableWrapper> {
                   ),
                 );
               },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-// 💡 [수정 끝]
-
-// ==================== 하단 네비게이션 ====================
-class BottomNavigationBarWidget extends StatelessWidget {
-  const BottomNavigationBarWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // 홈
-          _NavItem(
-            icon: Icons.home,
-            label: "홈",
-            active: true,
-            onTap: () {
-              // 💡 탭 시 햅틱 피드백 추가
-              HapticFeedback.lightImpact();
-              // 현재 페이지이므로 아무 작업도 하지 않음
-            },
-          ),
-          // 시간표 수정
-          _NavItem(
-            icon: Icons.edit_calendar_outlined,
-            label: "시간표 수정",
-            active: false,
-            onTap: () {
-              // 💡 탭 시 햅틱 피드백 추가
-              HapticFeedback.lightImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const ep
-                        .EditingPageParents()), // 💡 ep.EditingPageParents로 이동
-              );
-            },
-          ),
-          // 설정 - [수정] settings_page.dart로 이동하는 기능 추가
-          _NavItem(
-            icon: Icons.settings_outlined,
-            label: "설정",
-            active: false,
-            onTap: () {
-              // 💡 탭 시 햅틱 피드백 추가
-              HapticFeedback.lightImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const sp.SettingsPage()), // 💡 sp.SettingsPage로 이동
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback? onTap; // 💡 [추가] 탭 이벤트 핸들러
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.active,
-    this.onTap, // 💡 [추가] 초기화
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      // 💡 [수정] 탭 가능하도록 InkWell로 감싸기
-      onTap: onTap, // 💡 [추가] onTap 핸들러 연결
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: active ? Colors.blue : Colors.grey, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: active ? Colors.blue : Colors.grey,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],
