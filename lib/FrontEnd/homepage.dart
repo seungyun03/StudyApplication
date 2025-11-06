@@ -265,6 +265,12 @@ class _HeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 Provider 구독 (TimetableProvider)
+    final timetableProvider = context.watch<tp.TimetableProvider>();
+
+    // 💡 현재 선택된 시간표 이름 가져오기. 없으면 기본값으로 "시간표를 선택하세요"를 표시
+    final String timetableName = timetableProvider.currentTimetable?.name ?? "시간표를 선택하세요";
+
     // 💡 수정: Row 전체를 GestureDetector로 감싸서 탭 이벤트를 처리합니다.
     return GestureDetector(
       onTap: () {
@@ -274,13 +280,14 @@ class _HeaderSection extends StatelessWidget {
           MaterialPageRoute(builder: (_) => const TimeTableSelectionPage()),
         );
       },
-      child: const Row(
+      // 💡 수정: const Row(...) -> Row(...)로 변경 (내부에 동적 값이 포함되므로)
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 "시간표",
                 style: TextStyle(
                   fontFamily: 'Roboto',
@@ -289,10 +296,11 @@ class _HeaderSection extends StatelessWidget {
                   color: Color(0xFF1F2937),
                 ),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
-                "2024년 1학기",
-                style: TextStyle(
+                // "2024년 1학기", // <- 기존 코드
+                timetableName, // <- 현재 선택된 시간표 이름으로 변경
+                style: const TextStyle(
                   fontFamily: 'Roboto',
                   fontWeight: FontWeight.normal,
                   fontSize: 15.8,
@@ -301,7 +309,7 @@ class _HeaderSection extends StatelessWidget {
               ),
             ],
           ),
-          Icon(Icons.chevron_right, color: Colors.grey, size: 28),
+          const Icon(Icons.chevron_right, color: Colors.grey, size: 28),
         ],
       ),
     );
