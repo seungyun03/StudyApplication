@@ -221,6 +221,46 @@ class TimetableProvider extends ChangeNotifier {
     if(shouldNotify) notifyListeners();
   }
 
+  /// 🚨 [추가] 특정 시간표 삭제
+  Future<void> deleteTimeTable(String timeTableId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // 1. 목록에서 해당 시간표 찾기
+    final TimeTable? tableToDelete =
+    _allTimeTables.firstWhereOrNull((t) => t.id == timeTableId);
+
+    if (tableToDelete == null) return; // 이미 삭제되었거나 존재하지 않음
+
+    // 2. 시간표 목록에서 제거
+    _allTimeTables.removeWhere((t) => t.id == timeTableId);
+
+    // 3. SharedPreferences에서 해당 시간표 관련 데이터 (시간표 데이터, 과목 목록) 삭제
+    //    ⚠️ [주의] ScheduleProvider가 사용하는 키와 중복되지 않도록 접미사를 사용하여 삭제해야 함
+    await prefs.remove('${timeTableId}_$_timetableDataSuffix');
+    await prefs.remove('${timeTableId}_$_subjectListSuffix');
+
+    // 4. 목록 저장
+    await saveAllTimeTables();
+
+    // 5. 현재 활성화된 시간표가 삭제된 경우 처리
+    if (_currentTimetableId == timeTableId) {
+      if (_allTimeTables.isNotEmpty) {
+        // 남은 시간표가 있으면 가장 첫 번째 시간표를 선택
+        await selectTimeTable(_allTimeTables.first.id);
+      } else {
+        // 남은 시간표가 없으면 현재 시간표 ID 및 데이터 초기화
+        _currentTimetableId = null;
+        _timetable = {};
+        _subjectList = [];
+        await prefs.remove(_currentTimetableIdKey);
+        await prefs.remove(_getTimetableKey(_timetableDataSuffix)); // default_timetable_data 삭제
+        await prefs.remove(_getTimetableKey(_subjectListSuffix)); // default_all_subjects_data 삭제
+      }
+    }
+
+    notifyListeners();
+  }
+
   /// 🚨 [추가] 현재 시간표 ID 기반의 키 생성 함수
   String _getTimetableKey(String suffix) {
     if (_currentTimetableId == null) {

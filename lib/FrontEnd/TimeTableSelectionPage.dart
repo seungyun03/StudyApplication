@@ -72,6 +72,16 @@ class TimeTableSelectionPage extends StatelessWidget {
                                   Navigator.pop(context);
                                 }
                               },
+                              // 🚨 [추가] 삭제 로직: 경고 다이얼로그 표시 및 삭제
+                              onDelete: () async {
+                                final bool confirm = await _showDeleteConfirmationDialog(
+                                  context,
+                                  timetable.name,
+                                );
+                                if (confirm) {
+                                  await provider.deleteTimeTable(timetable.id);
+                                }
+                              },
                             ),
                           );
                         }).toList(),
@@ -114,6 +124,32 @@ class TimeTableSelectionPage extends StatelessWidget {
       },
     );
   }
+
+  // 🚨 [추가] 삭제 확인 다이얼로그 함수
+  Future<bool> _showDeleteConfirmationDialog(BuildContext context, String tableName) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('시간표 삭제 확인'),
+          content: Text('**$tableName** 시간표와 모든 과목, 시간표 정보가 영구적으로 삭제됩니다. 계속하시겠습니까?',
+            style: const TextStyle(height: 1.5),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false), // 취소
+              child: const Text('취소', style: TextStyle(color: Color(0xFF6B7280))),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true), // 확인 및 삭제 진행
+              child: const Text('삭제', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    ) ?? false; // null 방지
+  }
 }
 
 // ==================== 상단 헤더 위젯 ====================
@@ -155,6 +191,8 @@ class _TimeTableCard extends StatelessWidget {
   final Color backgroundColor;
   final bool isSelected;
   final VoidCallback onSelect;
+  // 🚨 [추가] 삭제 콜백 함수
+  final VoidCallback onDelete;
 
   const _TimeTableCard({
     required this.id,
@@ -162,6 +200,8 @@ class _TimeTableCard extends StatelessWidget {
     required this.backgroundColor,
     required this.isSelected,
     required this.onSelect,
+    // 🚨 [추가]
+    required this.onDelete,
   });
 
   @override
@@ -174,7 +214,7 @@ class _TimeTableCard extends StatelessWidget {
     final Color primaryColor = const Color(0xFF9333EA); // 보라색
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(20, 12, 12, 12), // 🚨 [수정] 오른쪽 패딩을 줄여 삭제 버튼 공간 확보
       decoration: BoxDecoration(
         color: backgroundColor, // 배경색 동적 설정
         borderRadius: BorderRadius.circular(12),
@@ -217,6 +257,29 @@ class _TimeTableCard extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       fontSize: 12,
                       color: primaryColor,
+                    ),
+                  )
+                else
+                // 🚨 [추가] 삭제 버튼
+                  SizedBox(
+                    height: 24, // 버튼 높이 제한
+                    child: TextButton(
+                      onPressed: onDelete, // 🚨 [연결] 삭제 콜백
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      child: const Text(
+                        '삭제',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Color(0xFFEF4444), // 빨간색
+                        ),
+                      ),
                     ),
                   ),
               ],
