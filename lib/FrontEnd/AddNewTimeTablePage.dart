@@ -1,5 +1,9 @@
 // 📄 AddNewTimeTablePage.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // 🚨 [추가] Provider 사용을 위한 import
+import 'package:uuid/uuid.dart'; // 🚨 [추가] 고유 ID 생성을 위한 uuid import
+import '../Providers/TimetableProvider.dart'; // 🚨 [추가] TimetableProvider 및 TimeTable 모델 import
 
 // ==================== 새로운 시간표 추가 페이지 ====================
 class AddNewTimeTablePage extends StatefulWidget {
@@ -11,13 +15,13 @@ class AddNewTimeTablePage extends StatefulWidget {
 
 class _AddNewTimeTablePageState extends State<AddNewTimeTablePage> {
   // 💡 폼 컨트롤러 및 상태 변수
-  final TextEditingController _nameController = TextEditingController(text: '2025년 2학기');
+  final TextEditingController _nameController = TextEditingController(text: '새로운 시간표');
 
   // 🚨 [수정] 텍스트 필드의 값을 실시간 반영하기 위한 상태 변수
-  String _timeTableName = '2025년 2학기';
+  String _timeTableName = '새로운 시간표';
   Color _selectedColor = const Color(0xFFFEE2E2); // 기본 선택 색상을 파스텔 톤으로 변경
 
-  // 🚨 [수정] 더 넓은 선택을 위한 색상 팔레트 (컬러 피커용) - 모두 파스텔/연한 톤으로 변경
+  // 🚨 [수정] 더 넓은 선택을 위한 색상 팔레트
   final List<Color> _fullColorPalette = const [
     // Row 1: Light Reds/Pinks
     Color(0xFFFEE2E2), // Very Light Red
@@ -74,24 +78,62 @@ class _AddNewTimeTablePageState extends State<AddNewTimeTablePage> {
     super.dispose();
   }
 
-  // 💡 시간표 추가 로직 (TODO: Provider 연동 필요)
-  void _addTimeTable() {
+  // ---------------------------
+  // 🚨 [구현] Provider를 사용하여 시간표를 추가하는 핵심 로직
+  // ---------------------------
+  void _addTimeTable() async {
     final newName = _nameController.text.trim();
     if (newName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('시간표 이름을 입력해주세요.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("시간표 이름을 입력해주세요."),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
 
-    // TODO: 1. DB 또는 Provider를 통해 실제 시간표 추가 및 저장
-    // TODO: 2. 추가 성공 시 TimeTableSelectionPage로 돌아가서 목록 새로고침
+    try {
+      // 1. Provider에 접근 (read 사용)
+      final provider = context.read<TimetableProvider>();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('\'$newName\' 시간표 추가 성공 (색상: $_selectedColor)')),
-    );
-    Navigator.pop(context); // 이전 페이지(TimeTableSelectionPage)로 돌아가기
+      // 2. 새로운 TimeTable 객체 생성 (UUID 사용)
+      const Uuid uuid = Uuid();
+      final newTable = TimeTable(
+        id: uuid.v4(),
+        name: newName,
+        color: _selectedColor,
+        createdAt: DateTime.now(),
+      );
+
+      // 3. Provider를 통해 추가 및 활성화
+      await provider.addNewTimeTable(newTable);
+
+      // 4. 성공 메시지 표시 및 페이지 닫기
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("'$newName' 시간표가 성공적으로 추가되었고 활성화되었습니다."),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        // 에러 처리
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("시간표 추가 중 오류가 발생했습니다: $e"),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
+  // ---------------------------
 
   // 🚨 [수정] 컬러 피커를 `showModalBottomSheet`로 표시하는 함수
   void _showColorPickerBottomSheet() {
@@ -230,7 +272,7 @@ class _AddNewTimeTablePageState extends State<AddNewTimeTablePage> {
             // 3. 하단 취소/추가 버튼
             _ActionButtons(
               onCancel: () => Navigator.pop(context),
-              onAdd: _addTimeTable,
+              onAdd: _addTimeTable, // 🚨 [연결] Provider 로직이 구현된 함수 연결
             ),
             const SizedBox(height: 10), // 하단 여백
           ],
