@@ -204,7 +204,8 @@ class _SubjectSelectionSection extends StatelessWidget {
     return Positioned(
       top: 120,
       left: 30,
-      child: SizedBox( // Container 대신 SizedBox를 사용하여 크기 고정
+      child: SizedBox(
+        // Container 대신 SizedBox를 사용하여 크기 고정
         width: 1306,
         height: 800,
         child: Stack(
@@ -234,8 +235,7 @@ class _SubjectSelectionSection extends StatelessWidget {
             ),
             // --- ✅ 새로운 과목 추가 버튼 ---
             // ⭐️ 삭제 모드일 때는 '새로운 과목 추가' 버튼을 표시하지 않습니다.
-            if (!isDeleteMode)
-              const _AddSubjectButton(),
+            if (!isDeleteMode) const _AddSubjectButton(),
           ],
         ),
       ),
@@ -262,7 +262,8 @@ class _SubjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Stack( // 삭제 아이콘을 띄우기 위해 Stack 사용
+      child: Stack(
+        // 삭제 아이콘을 띄우기 위해 Stack 사용
         children: [
           // 기존 Container (과목 카드 본체)
           Container(
@@ -273,7 +274,9 @@ class _SubjectCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(25),
               boxShadow: const [
                 BoxShadow(
-                    color: Color(0x20000000), offset: Offset(0, 2), blurRadius: 3)
+                    color: Color(0x20000000),
+                    offset: Offset(0, 2),
+                    blurRadius: 3)
               ],
             ),
             child: Column(
@@ -366,7 +369,9 @@ class _AddSubjectButton extends StatelessWidget {
               border: Border.all(color: const Color(0xFFE5E7EB)),
               boxShadow: const [
                 BoxShadow(
-                    color: Color(0x10000000), offset: Offset(0, 2), blurRadius: 4)
+                    color: Color(0x10000000),
+                    offset: Offset(0, 2),
+                    blurRadius: 4)
               ],
             ),
             child: const Row(
