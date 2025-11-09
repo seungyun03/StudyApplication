@@ -1,6 +1,8 @@
 // 📄 AddSubjectModelPage.dart (올바른 파일명: Model)
 
 import 'package:flutter/material.dart';
+// 💡 [추가] Provider 사용을 위한 임포트
+import 'package:provider/provider.dart';
 // 경로는 사용자의 프로젝트 구조에 맞게 수정이 필요할 수 있습니다.
 import '../Providers/TimetableProvider.dart';
 
@@ -70,6 +72,10 @@ class _AddSubjectModalPageState extends State<AddSubjectModalPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 [추가] TimetableProvider 접근 및 현재 시간표 이름 가져오기
+    final timetableProvider = Provider.of<TimetableProvider>(context);
+    final currentTimetableName = timetableProvider.currentTimetable?.name ?? '시간표 선택';
+
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.5),
       body: Center(
@@ -107,7 +113,7 @@ class _AddSubjectModalPageState extends State<AddSubjectModalPage> {
                 ],
               ),
               const SizedBox(height: 30),
-              // -------------------- 2024년 1학기 시간표 헤더 --------------------
+              // -------------------- 현재 시간표 이름 헤더 --------------------
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -115,9 +121,9 @@ class _AddSubjectModalPageState extends State<AddSubjectModalPage> {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  "2024년 1학기 시간표",
-                  style: TextStyle(
+                child: Text( // 💡 const 제거 및 현재 시간표 이름으로 대체
+                  currentTimetableName,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1F2937),
