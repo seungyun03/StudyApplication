@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
 import 'dart:ui'; // BackdropFilter를 위해 필요합니다.
 
-// 💡 [참고] LoginPage로 돌아가는 로직을 위해 이 파일은 필요하지 않지만,
-// 프로젝트 구조에 따라 상호 의존성이 있을 수 있어 필요 시 import합니다.
-// import 'LoginPage.dart';
+// 💡 [참고] 프로젝트 구조에 따라 LoginPage.dart 파일을 가져와야 합니다.
+import 'LoginPage.dart'; // 예시 경로: LoginPage로 돌아가기 위해 필요
 
-// 💡 HTML의 Tailwind 색상을 기반으로 정의됩니다.
+// ==================== [수정] AppColors (LoginPage.dart와 동일) ====================
+// 💡 HTML의 Tailwind 색상을 기반으로 정의됩니다. (중성적 디자인 테마)
 class AppColors {
-  // 배경 그라디언트 (from-purple-50 via-pink-50 to-blue-50)
-  static const Color backgroundStart = Color(0xFFF3E5F5); // purple-50 근사치
-  static const Color backgroundMiddle = Color(0xFFFCE4EC); // pink-50 근사치
-  static const Color backgroundEnd = Color(0xFFE3F2FD); // blue-50 근사치
+  // 💡 [수정] 배경 그라디언트 (파스텔 노랑, 민트, 파랑 계열로 변경: Neutral/Pastel Theme)
+  static const Color backgroundStart =
+      Color(0xFFFEF9C3); // Yellow-100 근사치 (은은한 노랑)
+  static const Color backgroundMiddle =
+      Color(0xFFDCFCE7); // Emerald-100 근사치 (은은한 민트/연두)
+  static const Color backgroundEnd =
+      Color(0xFFD0E0FB); // Sky-100/Blue-100 근사치 (은은한 파랑)
 
-  // Primary 버튼 및 텍스트 그라데이션 (#8C9EFF to #A0D4C5)
-  static const Color primaryGradientStart = Color(0xFF8C9EFF); // 밝은 파랑/보라
-  static const Color primaryGradientEnd = Color(0xFFA0D4C5); // 민트
+  // 💡 [수정] Primary 버튼 및 텍스트 그라데이션 (차분한 파랑/민트 계열: Indigo/Emerald)
+  static const Color primaryGradientStart = Color(0xFF6366F1); // indigo-500 근사치
+  static const Color primaryGradientEnd = Color(0xFF34D399); // emerald-400 근사치
 
   // 텍스트 및 기타 요소
-  static const Color foreground = Color(0xFF030213); // 거의 검은색
-  static const Color secondaryText = Color(0xFF6A6E82); // gray-500/600 근사치
+  static const Color foreground = Color(0xFF1F2937); // gray-800 근사치 (더 차분한 검은색)
+  static const Color secondaryText = Color(0xFF6B7280); // gray-500 근사치
   static const Color cardBackground = Color(0xFFFFFFFF); // 흰색
-  static const Color inputBackground = Color(0xFFF3F3F5); // gray-50 근사치
+  static const Color inputBackground = Color(0xFFF9FAFB); // gray-50 근사치 (약간 밝은)
+  // 💡 [추가] 기타 요소에 사용될 색상 (HomePage 테마 일관성 유지)
+  static const Color border = Color(0xFFE5E7EB); // gray-200
 }
 
-// 💡 비밀번호 표시/숨김 아이콘 토글 위젯 (LoginPage와 동일)
+// ==================== [추가] 공통 위젯 (LoginPage.dart에서 복사) ====================
+
+// 💡 비밀번호 표시/숨김 아이콘 토글 위젯
 class PasswordVisibilityToggle extends StatelessWidget {
   final bool isVisible;
   final VoidCallback onTap;
@@ -47,7 +54,7 @@ class PasswordVisibilityToggle extends StatelessWidget {
   }
 }
 
-// 💡 StudyFlow 텍스트에 그라데이션을 적용하는 위젯 (LoginPage와 동일)
+// 💡 StudyFlow 텍스트에 그라데이션을 적용하는 위젯
 class GradientText extends StatelessWidget {
   final String text;
   final double fontSize;
@@ -66,9 +73,9 @@ class GradientText extends StatelessWidget {
       ).createShader(bounds),
       child: Text(
         text,
-        textAlign: TextAlign.center, // 중앙 정렬 추가
+        textAlign: TextAlign.center,
         style: TextStyle(
-          color: Colors.white, // ShaderMask를 위해 임시로 흰색으로 설정
+          color: Colors.white,
           fontSize: fontSize,
           fontWeight: fontWeight,
         ),
@@ -77,7 +84,7 @@ class GradientText extends StatelessWidget {
   }
 }
 
-// 💡 커스텀 텍스트 필드 위젯 (LoginPage와 동일)
+// 💡 커스텀 텍스트 필드 위젯
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String labelText;
@@ -85,7 +92,6 @@ class CustomTextField extends StatelessWidget {
   final bool obscureText;
   final Widget? suffixIcon;
   final String hintText;
-  final FormFieldValidator<String>? validator;
 
   const CustomTextField({
     super.key,
@@ -95,22 +101,19 @@ class CustomTextField extends StatelessWidget {
     this.obscureText = false,
     this.suffixIcon,
     this.hintText = '',
-    this.validator, // validator 추가
   });
 
   @override
   Widget build(BuildContext context) {
-    // HTML의 .input-field 스타일
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12.0),
-      borderSide: const BorderSide(
-          color: Color(0xFFE5E7EB), width: 1.0), // border-gray-200
+      borderSide: const BorderSide(color: AppColors.border, width: 1.0),
     );
 
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12.0),
       borderSide: const BorderSide(
-        color: AppColors.primaryGradientStart, // #8C9EFF
+        color: AppColors.primaryGradientStart,
         width: 2.0,
       ),
     );
@@ -123,37 +126,29 @@ class CustomTextField extends StatelessWidget {
           child: Text(
             labelText,
             style: const TextStyle(
-              fontSize: 14.0, // text-sm
-              fontWeight: FontWeight.w500, // font-medium
-              color: Color(0xFF374151), // text-gray-700
+              fontSize: 14.0,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF374151),
             ),
           ),
         ),
-        TextFormField(
-          // TextFormField로 변경하여 Form validation 지원
+        TextField(
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
           style: const TextStyle(color: AppColors.foreground),
-          validator: validator, // validator 적용
           decoration: InputDecoration(
-            errorStyle: const TextStyle(height: 0.5), // 에러 메시지 간격 조정
-            isDense: true, // 내부 패딩 조정
             hintText: hintText,
             hintStyle:
                 TextStyle(color: AppColors.secondaryText.withOpacity(0.7)),
             filled: true,
-            fillColor: AppColors.inputBackground, // bg-gray-50
+            fillColor: AppColors.inputBackground,
             suffixIcon: suffixIcon,
             border: inputBorder,
             enabledBorder: inputBorder,
             focusedBorder: focusedBorder,
-            errorBorder: inputBorder.copyWith(
-                borderSide: const BorderSide(color: Colors.red, width: 1.0)),
-            focusedErrorBorder: focusedBorder.copyWith(
-                borderSide: const BorderSide(color: Colors.red, width: 2.0)),
-            contentPadding: const EdgeInsets.symmetric(
-                vertical: 14.0, horizontal: 16.0), // p-3 근사치
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
           ),
         ),
       ],
@@ -161,19 +156,15 @@ class CustomTextField extends StatelessWidget {
   }
 }
 
-// 💡 디자인에 따른 그라디언트 버튼 위젯 (LoginPage와 동일)
+// 💡 디자인에 따른 그라디언트 버튼 위젯 (회원가입 버튼)
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
-  final bool isGoogleLogin;
-  final Widget? icon;
 
   const GradientButton({
     super.key,
     required this.text,
     required this.onPressed,
-    this.isGoogleLogin = false,
-    this.icon,
   });
 
   @override
@@ -182,49 +173,7 @@ class GradientButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(12.0), // rounded-xl
     );
 
-    if (isGoogleLogin) {
-      // Google 로그인 버튼 스타일
-      return Container(
-        height: 50, // py-3 근사치
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.0),
-            border: Border.all(
-                color: const Color(0xFFD1D5DB), width: 1.0), // border-gray-300
-            color: AppColors.cardBackground, // bg-white
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ), // shadow-sm
-            ]),
-        child: InkWell(
-          onTap: onPressed,
-          customBorder: shape,
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  icon!,
-                  const SizedBox(width: 12.0), // space-x-3
-                ],
-                Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.w500, // font-medium
-                    color: Color(0xFF374151), // text-gray-700
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 메인 그라데이션 버튼 스타일
+    // 메인 회원가입 버튼 스타일 (그라데이션 배경 + 그림자)
     return Container(
       height: 50, // py-3 근사치
       decoration: BoxDecoration(
@@ -237,9 +186,9 @@ class GradientButton extends StatelessWidget {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        // HTML의 .primary-btn box-shadow 구현
         boxShadow: [
           BoxShadow(
+            // 💡 [수정] 그림자 색상을 변경된 primary 색상에 맞춤
             color: AppColors.primaryGradientStart.withOpacity(0.5),
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -253,7 +202,7 @@ class GradientButton extends StatelessWidget {
           customBorder: shape,
           child: Center(
             child: Text(
-              text, // 💡 [수정 사항] LoginPage와 달리, 전달받은 텍스트를 사용하도록 수정
+              text, // '회원가입 완료'
               style: const TextStyle(
                 fontSize: 18.0, // text-lg
                 fontWeight: FontWeight.w600, // font-semibold
@@ -266,6 +215,7 @@ class GradientButton extends StatelessWidget {
     );
   }
 }
+// ==================== [추가 끝] ====================
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -279,39 +229,21 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
 
-  // 비밀번호 가시성 토글을 위한 상태 변수
-  bool _showPassword1 = false;
-  bool _showPassword2 = false;
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
-  // 회원가입 처리 로직
-  void _signUp() {
-    if (_formKey.currentState!.validate()) {
-      // FormFieldValidator가 일치 여부를 체크하지만, 버튼 클릭 시 최종 확인
-      if (_passwordController.text != _confirmPasswordController.text) {
-        _showMessage('비밀번호가 일치하지 않습니다.');
-        return;
-      }
-
-      // TODO: 실제 서버 통신 회원가입 로직 구현
-      print('회원가입 시도: ${_emailController.text}');
-
-      _showMessage('회원가입 성공! 로그인 페이지로 이동합니다.');
-      // 회원가입 성공 시 이전 페이지(로그인 페이지)로 돌아가기
-      Navigator.pop(context);
-    }
-  }
-
-  // 메시지 박스 (LoginPage와 동일)
+  // 메시지 박스
   void _showMessage(String message) {
     showDialog(
       context: context,
@@ -335,14 +267,47 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // 로그인 페이지로 돌아가기
+  // 💡 [수정] 회원가입 완료 처리 로직
+  void _handleSignUpComplete() {
+    // 1. 유효성 검사 (간단화)
+    if (_emailController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty ||
+        _nameController.text.isEmpty) {
+      _showMessage('모든 정보를 입력해주세요.');
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showMessage('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    // 2. 실제 회원가입 로직 (API 호출 등)을 구현할 위치입니다.
+    print('회원가입 완료: ${_emailController.text}');
+
+    // 3. [핵심 수정] 회원가입 성공 후 **로그인 페이지로 돌아가기**
+    // pushReplacement를 사용하여 회원가입 스택을 제거하고 로그인 페이지로 대체합니다.
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+
+    // 4. 로그인 페이지로 돌아간 후, 성공 메시지를 표시하고 싶다면 아래와 같이 수정 필요:
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(builder: (context) => const LoginPage(showSuccess: true)),
+    // );
+  }
+
+  // [유지] 로그인 페이지로 돌아가기 (하단 링크 클릭 시)
   void _handleBackToLogin() {
-    Navigator.pop(context);
+    Navigator.pop(context); // 현재 페이지를 스택에서 제거하고 이전 페이지 (LoginPage)로 돌아갑니다.
   }
 
   @override
   Widget build(BuildContext context) {
-    // LoginPage와 동일한 배경 그라데이션 적용
+    // 💡 [수정] LoginPage의 배경 그라데이션 적용
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -357,20 +322,19 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent, // 배경 투명 처리
-        appBar: null, // AppBar 제거하여 전체 화면 UI 구성
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
-              // LoginPage와 동일한 카드 스타일 적용
+              // 💡 [수정] LoginPage의 카드 스타일 적용
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24.0), // rounded-3xl
                 child: BackdropFilter(
                   filter: ImageFilter.blur(
                       sigmaX: 5.0, sigmaY: 5.0), // backdrop-blur-sm
                   child: Container(
-                    padding: const EdgeInsets.all(40),
+                    padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
                     decoration: BoxDecoration(
                         color: AppColors.cardBackground
                             .withOpacity(0.8), // bg-white/80
@@ -381,135 +345,156 @@ class _SignUpPageState extends State<SignUpPage> {
                             offset: const Offset(0, 10),
                           ), // shadow-2xl
                         ]),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          // 1. 제목 (LoginPage의 GradientText 사용)
-                          const GradientText(
-                            'StudyFlow',
-                            fontSize: 30.0,
-                            fontWeight: FontWeight.w900,
-                          ),
-                          const SizedBox(height: 5),
-
-                          // 2. 부제목
-                          const Text(
-                            '새 계정을 만들어 학습을 시작하세요',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16.0,
-                              color: AppColors.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(height: 32.0),
-
-                          // 3. 이메일 입력 필드 (CustomTextField 사용)
-                          CustomTextField(
-                            controller: _emailController,
-                            labelText: '이메일 주소 (아이디)',
-                            hintText: 'name@example.com',
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return '이메일을 입력해주세요.';
-                              }
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                  .hasMatch(value)) {
-                                return '유효한 이메일 형식이 아닙니다.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20.0),
-
-                          // 4. 비밀번호 입력 필드 (CustomTextField + PasswordVisibilityToggle 사용)
-                          CustomTextField(
-                            controller: _passwordController,
-                            labelText: '비밀번호',
-                            hintText: '8자 이상 입력해주세요',
-                            obscureText: !_showPassword1,
-                            suffixIcon: PasswordVisibilityToggle(
-                              isVisible: _showPassword1,
-                              onTap: () {
-                                setState(() {
-                                  _showPassword1 = !_showPassword1;
-                                });
-                              },
-                            ),
-                            validator: (value) {
-                              if (value == null || value.length < 8) {
-                                return '비밀번호는 8자 이상이어야 합니다.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20.0),
-
-                          // 5. 비밀번호 확인 필드 (CustomTextField + PasswordVisibilityToggle 사용)
-                          CustomTextField(
-                            controller: _confirmPasswordController,
-                            labelText: '비밀번호 확인',
-                            hintText: '비밀번호를 다시 입력해주세요',
-                            obscureText: !_showPassword2,
-                            suffixIcon: PasswordVisibilityToggle(
-                              isVisible: _showPassword2,
-                              onTap: () {
-                                setState(() {
-                                  _showPassword2 = !_showPassword2;
-                                });
-                              },
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return '비밀번호 확인을 입력해주세요.';
-                              }
-                              if (value != _passwordController.text) {
-                                return '비밀번호가 일치하지 않습니다.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 40.0),
-
-                          // 6. 회원가입 버튼 (GradientButton 사용)
-                          GradientButton(
-                            text: '회원가입 완료',
-                            onPressed: _signUp,
-                          ),
-                          const SizedBox(height: 24.0),
-
-                          // 7. 로그인 페이지로 돌아가기 링크
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                '이미 계정이 있으신가요? ',
-                                style: TextStyle(
-                                    color: Color(0xFF4B5563), fontSize: 14.0),
-                              ),
-                              TextButton(
-                                onPressed: _handleBackToLogin,
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: const Text(
-                                  '로그인으로 돌아가기',
-                                  style: TextStyle(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        // 1. 로고 (SignUp 페이지에서는 로고를 더 작게 배치)
+                        Container(
+                          alignment: Alignment.center,
+                          child: Image.asset(
+                            'assets/images/logo_studyflow.png', // 로고 이미지 경로
+                            height: 120, // 로그인 페이지보다 작게 (w-32 h-32 근사치)
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              // 이미지 로드 실패 시 대체 위젯
+                              return Container(
+                                width: 128,
+                                height: 128,
+                                decoration: BoxDecoration(
                                     color: AppColors.primaryGradientStart,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14.0,
-                                  ),
+                                    borderRadius: BorderRadius.circular(
+                                        999), // rounded-full
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.5),
+                                        width: 4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ]),
+                                child: const Center(
+                                  child: Text('SF',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.none,
+                                      )),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 10), // 로고와 제목 사이 간격 조정
+
+                        // 2. 제목 (h1) - 그라데이션 적용
+                        GradientText(
+                          '회원가입',
+                          fontSize: 28.0, // text-2xl
+                          fontWeight: FontWeight.w900,
+                        ),
+
+                        const SizedBox(height: 5),
+
+                        // 3. 부제목 (p)
+                        const Text(
+                          '새 계정을 만들고 StudyFlow를 시작하세요',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16.0,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 32.0),
+
+                        // 4. 이름 입력 필드
+                        CustomTextField(
+                          controller: _nameController,
+                          labelText: '이름',
+                          hintText: '김스터디',
+                        ),
+                        const SizedBox(height: 20.0),
+
+                        // 5. 이메일 입력 필드
+                        CustomTextField(
+                          controller: _emailController,
+                          labelText: '이메일 주소',
+                          hintText: 'name@example.com',
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 20.0),
+
+                        // 6. 비밀번호 입력 필드
+                        CustomTextField(
+                          controller: _passwordController,
+                          labelText: '비밀번호',
+                          hintText: '••••••••',
+                          obscureText: !_showPassword,
+                          suffixIcon: PasswordVisibilityToggle(
+                            isVisible: _showPassword,
+                            onTap: () {
+                              setState(() {
+                                _showPassword = !_showPassword;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 20.0),
+
+                        // 7. 비밀번호 확인 입력 필드
+                        CustomTextField(
+                          controller: _confirmPasswordController,
+                          labelText: '비밀번호 확인',
+                          hintText: '••••••••',
+                          obscureText: !_showConfirmPassword,
+                          suffixIcon: PasswordVisibilityToggle(
+                            isVisible: _showConfirmPassword,
+                            onTap: () {
+                              setState(() {
+                                _showConfirmPassword = !_showConfirmPassword;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 30.0),
+
+                        // 8. 회원가입 완료 버튼 (그라디언트)
+                        GradientButton(
+                          text: '회원가입 완료',
+                          onPressed: _handleSignUpComplete, // 💡 수정된 함수 연결
+                        ),
+                        const SizedBox(height: 24.0),
+
+                        // 9. 로그인 페이지로 돌아가기 링크
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              '이미 계정이 있으신가요? ',
+                              style: TextStyle(
+                                  color: Color(0xFF4B5563), fontSize: 14.0),
+                            ),
+                            TextButton(
+                              onPressed: _handleBackToLogin,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                '로그인으로 돌아가기',
+                                style: TextStyle(
+                                  color: AppColors.primaryGradientStart,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.0,
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
