@@ -40,6 +40,16 @@ class TimeTable {
     createdAt: DateTime.parse(json['createdAt'] as String),
   );
 
+  // 💡 [추가] 새로운 이름과 색상으로 복사된 TimeTable 객체를 반환하는 함수
+  TimeTable copyWith({String? name, Color? color}) {
+    return TimeTable(
+      id: id,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      createdAt: createdAt,
+    );
+  }
+
   // ID 기반 동등성 비교
   @override
   bool operator ==(Object other) =>
@@ -183,6 +193,34 @@ class TimetableProvider extends ChangeNotifier {
       await prefs.setString(_currentTimetableIdKey, _currentTimetableId!);
     } else {
       await prefs.remove(_currentTimetableIdKey);
+    }
+  }
+
+  /// 🚨 [추가] 특정 시간표의 이름/색상 수정
+  Future<void> updateTimeTableInfo({
+    required String timeTableId,
+    required String newName,
+    required Color newColor,
+  }) async {
+    // 1. 목록에서 해당 시간표 찾기
+    final int index = _allTimeTables.indexWhere((t) => t.id == timeTableId);
+
+    if (index != -1) {
+      final TimeTable originalTable = _allTimeTables[index];
+      // 2. 새로운 이름과 색상으로 TimeTable 객체 생성 (copyWith 사용)
+      final TimeTable updatedTable = originalTable.copyWith(
+        name: newName,
+        color: newColor,
+      );
+
+      // 3. 목록 업데이트
+      _allTimeTables[index] = updatedTable;
+
+      // 4. 목록 저장
+      await saveAllTimeTables();
+
+      // 5. 리스너 알림
+      notifyListeners();
     }
   }
 
