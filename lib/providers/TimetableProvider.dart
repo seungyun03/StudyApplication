@@ -1,4 +1,5 @@
-// 📄 TimetableProvider.dart
+// 📄 TimetableProvider.dart (수정된 전체 코드)
+// ===================================================================
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -377,31 +378,103 @@ class TimetableProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ 과목 영구 삭제 (subjectList에서 사용)
-  Future<void> deleteSubject(SubjectInfo subjectToDelete) async {
-    // 1. 과목 목록에서 제거
-    _subjectList.remove(subjectToDelete);
+  // 💡 [추가] 과목 정보 수정 (이름 변경 시 데이터 마이그레이션 포함)
+  Future<void> updateSubjectDetails({
+    required String originalSubjectName,
+    required SubjectInfo newSubjectInfo,
+  }) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // 2. 시간표 슬롯에서 해당 과목을 null로 설정하여 시간표에서 제거
-    final keysToRemove = _timetable.keys
-        .where((key) =>
-    _timetable[key] != null &&
-        _timetable[key]!.subject == subjectToDelete.subject)
-        .toList();
-
-    for (final key in keysToRemove) {
-      _timetable[key] = null;
+    // 1. 과목 목록(subjectList)에서 원본을 찾아 새 정보로 교체
+    int subjectIndex = _subjectList.indexWhere((s) => s.subject == originalSubjectName);
+    if (subjectIndex != -1) {
+      _subjectList[subjectIndex] = newSubjectInfo;
+      await saveSubjectList(); // 과목 목록 저장
     }
 
-    // 3. 두 데이터 모두 저장
-    await saveSubjectList();
-    await saveTimetable();
+    // 2. 시간표(timetable)에서 원본 과목을 사용하는 모든 슬롯을 새 정보로 교체
+    final Map<String, SubjectInfo?> updatedTimetable = {};
+    _timetable.forEach((key, info) {
+      if (info != null && info.subject == originalSubjectName) {
+        updatedTimetable[key] = newSubjectInfo; // 새 정보로 교체
+      } else {
+        updatedTimetable[key] = info; // 기존 정보 유지
+      }
+    });
+    _timetable = updatedTimetable;
+    await saveTimetable(); // 시간표 저장
 
+    // 3. [중요] 과목 이름이 변경된 경우, SharedPreferences 키 마이그레이션
+    if (originalSubjectName != newSubjectInfo.subject) {
+      final String newName = newSubjectInfo.subject;
+
+      // 마이그레이션할 키 접두사 (TimeTableButton.dart 참조)
+      const List<String> prefixes = ['lectures_', 'assignments_', 'exams_'];
+
+      for (final prefix in prefixes) {
+        final String oldKey = '${prefix}${originalSubjectName}';
+        final String newKey = '${prefix}${newName}';
+
+        final String? data = prefs.getString(oldKey);
+        if (data != null) {
+          await prefs.setString(newKey, data); // 새 키로 데이터 복사
+          await prefs.remove(oldKey);        // 이전 키 삭제
+        }
+      }
+    }
+
+    // 4. 리스너 알림
     notifyListeners();
 
+    // 5. HomePage의 EditingPageParents에도 알림 (시간표 UI 갱신)
     if (onTimetableUpdate != null) {
       await onTimetableUpdate!();
     }
+    // (참고: 이 함수를 호출한 TimeTableButton에서 ScheduleProvider.loadAllSchedules()를 호출하여
+    // 과제/시험 목록 UI도 갱신해야 합니다.)
+  }
+
+
+  /// ✅ [수정] 과목 영구 삭제 (관련 SharedPreferences 데이터 포함)
+  Future<void> deleteSubject(SubjectInfo subjectToDelete) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String subjectName = subjectToDelete.subject;
+
+    // 1. 과목 목록에서 제거
+    _subjectList.remove(subjectToDelete);
+
+    // 2. 시간표 슬롯에서 해당 과목을 null로 설정
+    final keysToClear = _timetable.keys
+        .where((key) =>
+    _timetable[key] != null &&
+        _timetable[key]!.subject == subjectName)
+        .toList();
+
+    for (final key in keysToClear) {
+      _timetable[key] = null;
+    }
+
+    // 3. [추가] 관련된 SharedPreferences 데이터 (강의, 과제, 시험) 삭제
+    // (TimeTableButton.dart에서 사용하는 키 형식과 일치해야 함)
+    const List<String> prefixes = ['lectures_', 'assignments_', 'exams_'];
+    for (final prefix in prefixes) {
+      final String keyToDelete = '${prefix}${subjectName}';
+      await prefs.remove(keyToDelete);
+    }
+
+    // 4. 두 데이터 모두 저장
+    await saveSubjectList();
+    await saveTimetable();
+
+    // 5. 리스너 알림 (HomePage 등)
+    notifyListeners();
+
+    // 6. 시간표 UI 갱신 콜백
+    if (onTimetableUpdate != null) {
+      await onTimetableUpdate!();
+    }
+    // (참고: 이 함수를 호출한 TimeTableButton에서 ScheduleProvider.loadAllSchedules()를
+    // 호출하여 과제/시험 목록 UI도 갱신해야 합니다.)
   }
 
   /// ✅ 개별 업데이트 (저장 로직 추가)

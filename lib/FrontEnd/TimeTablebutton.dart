@@ -1,4 +1,4 @@
-// 📄 TimeTablebutton.dart (사용자 요청 사항 및 모든 수정 사항 반영된 전체 코드)
+// 📄 TimeTablebutton.dart (수정된 전체 코드)
 // ===================================================================
 
 import 'package:flutter/material.dart';
@@ -7,13 +7,15 @@ import 'package:open_filex/open_filex.dart';
 import 'AddOfSubject/LectureAddPage.dart';
 import 'AddOfSubject/AssignmentAddPage.dart';
 import 'AddOfSubject/ExamAddPage.dart';
+// 💡 [추가] 과목 수정 페이지 임포트
+import 'SubjectEditPage.dart';
 // 💡 추가: 상태 영속성을 위한 패키지
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // JSON 인코딩/디코딩
 // 💡 추가: Provider 임포트
 import 'package:provider/provider.dart';
-import '../Providers/TimetableProvider.dart'
-as tp; // ScheduleProvider가 이 파일 안에 정의되어 있습니다.
+// 💡 [수정] TimetableProvider.dart 파일에서 export하는 모든 것을 'tp' 네임스페이스로 가져옴
+import '../Providers/TimetableProvider.dart' as tp;
 
 class TimeTableButton extends StatefulWidget {
   final String subjectName;
@@ -37,6 +39,7 @@ class TimeTableButton extends StatefulWidget {
 
 class _TimeTableButtonState extends State<TimeTableButton> {
   // 💡 SharedPreferences Key 정의 (각 과목별로 저장하기 위해 subjectName 사용)
+  // 💡 [중요] 이 키는 Provider의 update/delete 로직과 일치해야 합니다.
   late final String _lectureKey = 'lectures_${widget.subjectName}';
   late final String _assignmentKey = 'assignments_${widget.subjectName}';
   late final String _examKey = 'exams_${widget.subjectName}';
@@ -54,6 +57,11 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   @override
   void initState() {
     super.initState();
+    // 💡 [수정] 과목 이름이 변경되었을 수 있으므로, Provider에서 최신 과목 이름을 찾아옴.
+    // 하지만 이 위젯은 'subjectName'을 생성자로 받으므로,
+    // 만약 이전 화면(HomePage)에서 이름이 변경되었으나 이 페이지가 닫히지 않았다면
+    // 'widget.subjectName'은 옛날 이름일 수 있습니다.
+    // 여기서는 'widget.subjectName'이 유효하다고 가정하고 데이터를 로드합니다.
     _loadData().then((_) {
       // 💡 추가: 데이터 로드 후, 초기 항목 데이터가 있다면 수정 페이지로 이동
       if (widget.initialItemData != null) {
@@ -195,6 +203,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     // 강의 로드
+    // 💡 [중요] _lectureKey는 widget.subjectName을 기반으로 함
     final String? lecturesJson = prefs.getString(_lectureKey);
     if (lecturesJson != null) {
       final List<dynamic> decodedList = jsonDecode(lecturesJson);
@@ -344,6 +353,87 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       // 유효한 날짜가 없으면 문자열로 비교하거나 기본 순서 유지
       return aDateStr.compareTo(bDateStr);
     });
+  }
+
+  // -------------------------------------------------------------------
+  // 💡 [추가] 과목 수정/삭제 처리 (SubjectEditPage 연동)
+  // -------------------------------------------------------------------
+  void _handleEditSubject() async {
+    // 1. Provider에 접근 (listen: false는 필수)
+    final timetableProvider = Provider.of<tp.TimetableProvider>(context, listen: false);
+    final scheduleProvider = Provider.of<tp.ScheduleProvider>(context, listen: false);
+
+    // 2. 현재 과목명(widget.subjectName)과 일치하는 SubjectInfo 찾기
+    // 💡 'tp.SubjectInfo' 및 'firstWhereOrNull' 확장 사용 (TimetableProvider.dart에 정의됨)
+    final tp.SubjectInfo? currentSubjectInfo = timetableProvider.subjectList.firstWhereOrNull(
+          (info) => info.subject == widget.subjectName,
+    );
+
+    // 3. 현재 시간표 이름 가져오기
+    final String currentTimetableName = timetableProvider.currentTimetable?.name ?? '시간표 선택';
+
+    // 4. SubjectInfo를 찾지 못한 경우 예외 처리
+    if (currentSubjectInfo == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('과목 정보를 찾을 수 없어 수정할 수 없습니다.')),
+        );
+      }
+      return;
+    }
+
+    // 5. SubjectEditPage로 이동 (투명한 모달 스타일)
+    final result = await Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, // 배경을 투명하게
+        barrierDismissible: true, // 바깥 영역 탭 시 닫기
+        barrierColor: Colors.black.withOpacity(0.5), // 반투명 배경
+        pageBuilder: (context, _, __) => SubjectEditPage(
+          originalSubjectName: widget.subjectName, // 원본 이름 (Key)
+          currentTimetableName: currentTimetableName,
+          // 수정할 초기 값들
+          initialSubjectName: currentSubjectInfo.subject,
+          initialRoomName: currentSubjectInfo.room,
+          initialBgColor: currentSubjectInfo.bgColor,
+          initialTextColor: currentSubjectInfo.textColor,
+        ),
+      ),
+    );
+
+    // 6. SubjectEditPage에서 반환된 결과 처리
+    if (result != null && result is Map<String, dynamic> && mounted) {
+      final action = result['action'];
+
+      if (action == 'edit') {
+        // 💡 Provider의 'updateSubjectDetails' 함수 호출 (TimetableProvider.dart에 추가됨)
+        await timetableProvider.updateSubjectDetails(
+          originalSubjectName: result['originalName'],
+          // 💡 tp.SubjectInfo로 객체 생성
+          newSubjectInfo: tp.SubjectInfo(
+            subject: result['subject'],
+            room: result['room'],
+            bgColor: Color(result['bgColor']),
+            textColor: Color(result['textColor']),
+            roomColor: Color(result['roomColor']),
+          ),
+        );
+
+        // 💡 ScheduleProvider 갱신 (과제/시험 목록 새로고침)
+        await scheduleProvider.loadAllSchedules();
+        // 💡 수정 완료 후 상세 페이지 닫기 (이름이 변경되었을 수 있으므로)
+        Navigator.pop(context);
+
+      } else if (action == 'delete') {
+        // 💡 Provider의 'deleteSubject' 함수 호출 (TimetableProvider.dart에서 수정됨)
+        await timetableProvider.deleteSubject(currentSubjectInfo);
+
+        // 💡 ScheduleProvider 갱신 (삭제된 과목의 과제/시험 제거)
+        await scheduleProvider.loadAllSchedules();
+        // 💡 삭제 완료 후 상세 페이지 닫기
+        Navigator.pop(context);
+      }
+    }
   }
 
   // -------------------------------------------------------------------
@@ -560,10 +650,17 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   @override
   Widget build(BuildContext context) {
     // 💡 [추가] TimetableProvider 접근
+    // 💡 [수정] Provider.of<tp.TimetableProvider> 사용
     final timetableProvider = Provider.of<tp.TimetableProvider>(context);
     // 💡 [수정] 현재 시간표 이름 가져오기. 없으면 '시간표 선택'으로 표시
     final currentTimetableName =
         timetableProvider.currentTimetable?.name ?? '시간표 선택';
+
+    // 💡 [수정] 현재 과목 이름.
+    // 만약 Provider에서 이름이 변경되었으나 이 페이지가 살아있다면,
+    // 이 헤더는 예전 이름을 표시할 수 있습니다.
+    // 여기서는 widget.subjectName (진입 시점의 이름)을 그대로 사용합니다.
+    final String displaySubjectName = widget.subjectName;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -577,7 +674,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                 children: [
                   const SizedBox(height: 20),
                   Text(
-                    widget.subjectName,
+                    displaySubjectName, // 💡 수정된 이름이 아닐 수 있음
                     style: const TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
@@ -702,7 +799,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
             ),
 
             // -------------------------------------------------------------------
-            // 하단 네비게이션바 및 뒤로가기 버튼은 동일
+            // 하단 네비게이션바 및 버튼
             // -------------------------------------------------------------------
             Align(
               alignment: Alignment.bottomCenter,
@@ -728,15 +825,17 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                 ),
               ),
             ),
+
+            // 💡 [수정] '뒤로가기' 버튼 (우측 상단)
             Positioned(
               right: 24,
-              top: 16,
+              top: 16, // 💡 높이 통일
               child: InkWell(
                 onTap: () => Navigator.pop(context),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  width: 76,
-                  height: 44,
+                  width: 76, // 💡 너비 통일
+                  height: 44, // 💡 높이 통일
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(8),
@@ -746,6 +845,27 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                 ),
               ),
             ),
+
+            // 💡 [추가] '과목 수정' 버튼 (좌측 상단)
+            Positioned(
+              left: 24,
+              top: 16, // 💡 높이 통일
+              child: InkWell(
+                onTap: _handleEditSubject, // 💡 수정 함수 연결
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 76, // 💡 너비 통일
+                  height: 44, // 💡 높이 통일
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                      child: Icon(Icons.edit_outlined, color: Colors.black54, size: 20,)),
+                ),
+              ),
+            ),
+
           ],
         ),
       ),
