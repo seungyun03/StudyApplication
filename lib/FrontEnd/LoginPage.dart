@@ -6,22 +6,27 @@ import 'dart:ui'; // BackdropFilter를 위해 필요합니다.
 import 'Homepage.dart'; // 예시 경로
 import 'SignUpPage.dart'; // <--- 이 줄을 추가합니다. (예시 경로)
 
-// 💡 HTML의 Tailwind 색상을 기반으로 정의됩니다.
+// 💡 HTML의 Tailwind 색상을 기반으로 정의됩니다. (중성적 디자인 테마로 수정됨)
 class AppColors {
-  // 배경 그라디언트 (from-purple-50 via-pink-50 to-blue-50)
-  static const Color backgroundStart = Color(0xFFF3E5F5); // purple-50 근사치
-  static const Color backgroundMiddle = Color(0xFFFCE4EC); // pink-50 근사치
-  static const Color backgroundEnd = Color(0xFFE3F2FD); // blue-50 근사치
+  // 💡 [수정] 배경 그라디언트 (파스텔 노랑, 민트, 파랑 계열로 변경: Neutral/Pastel Theme)
+  static const Color backgroundStart =
+      Color(0xFFFEF9C3); // Yellow-100 근사치 (은은한 노랑)
+  static const Color backgroundMiddle =
+      Color(0xFFDCFCE7); // Emerald-100 근사치 (은은한 민트/연두)
+  static const Color backgroundEnd =
+      Color(0xFFD0E0FB); // Sky-100/Blue-100 근사치 (은은한 파랑)
 
-  // Primary 버튼 및 텍스트 그라데이션 (#8C9EFF to #A0D4C5)
-  static const Color primaryGradientStart = Color(0xFF8C9EFF); // 밝은 파랑/보라
-  static const Color primaryGradientEnd = Color(0xFFA0D4C5); // 민트
+  // 💡 [수정] Primary 버튼 및 텍스트 그라데이션 (차분한 파랑/민트 계열: Indigo/Emerald)
+  static const Color primaryGradientStart = Color(0xFF6366F1); // indigo-500 근사치
+  static const Color primaryGradientEnd = Color(0xFF34D399); // emerald-400 근사치
 
   // 텍스트 및 기타 요소
-  static const Color foreground = Color(0xFF030213); // 거의 검은색
-  static const Color secondaryText = Color(0xFF6A6E82); // gray-500/600 근사치
+  static const Color foreground = Color(0xFF1F2937); // gray-800 근사치 (더 차분한 검은색)
+  static const Color secondaryText = Color(0xFF6B7280); // gray-500 근사치
   static const Color cardBackground = Color(0xFFFFFFFF); // 흰색
-  static const Color inputBackground = Color(0xFFF3F3F5); // gray-50 근사치
+  static const Color inputBackground = Color(0xFFF9FAFB); // gray-50 근사치 (약간 밝은)
+  // 💡 [추가] 기타 요소에 사용될 색상 (HomePage 테마 일관성 유지)
+  static const Color border = Color(0xFFE5E7EB); // gray-200
 }
 
 // 💡 main 함수: 앱의 시작점
@@ -212,7 +217,7 @@ class GradientButton extends StatelessWidget {
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(
-                color: const Color(0xFFD1D5DB), width: 1.0), // border-gray-300
+                color: AppColors.border, width: 1.0), // border-gray-300
             color: AppColors.cardBackground, // bg-white
             boxShadow: [
               BoxShadow(
@@ -263,6 +268,7 @@ class GradientButton extends StatelessWidget {
         // HTML의 .primary-btn box-shadow 구현
         boxShadow: [
           BoxShadow(
+            // 💡 [수정] 그림자 색상을 변경된 primary 색상에 맞춤
             color: AppColors.primaryGradientStart.withOpacity(0.5),
             blurRadius: 10,
             offset: const Offset(0, 4),
