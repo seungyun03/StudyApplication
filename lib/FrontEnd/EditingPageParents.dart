@@ -71,6 +71,10 @@ class _EditingPageParentsState extends State<EditingPageParents> {
       '23:00',
     ];
 
+    // 🚨 핵심 수정: Provider를 watch하여 현재 활성화된 시간표 정보를 가져옵니다.
+    final currentTimetable = context.watch<tp.TimetableProvider>().currentTimetable;
+    final timetableName = currentTimetable?.name ?? "시간표"; // 이름이 없으면 기본값 사용
+
     return WillPopScope(
       onWillPop: () async {
         _updateTimetableAndSchedules(context);
@@ -157,9 +161,10 @@ class _EditingPageParentsState extends State<EditingPageParents> {
                                       mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                       children: [
-                                        const Text(
-                                          "2024년 1학기 시간표",
-                                          style: TextStyle(
+                                        // 🚨 핵심 수정: 하드 코딩된 텍스트 대신 현재 시간표 이름 사용
+                                        Text(
+                                          timetableName,
+                                          style: const TextStyle(
                                             fontSize: 19.89,
                                             fontWeight: FontWeight.bold,
                                             color: Color(0xFF1F2937),
