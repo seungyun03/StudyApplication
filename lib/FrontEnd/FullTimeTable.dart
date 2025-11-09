@@ -1,4 +1,4 @@
-// 📄 FullTimeTable.dart (최종 수정 전체 코드 - '삭제' 기능 및 버튼 완전 제거)
+// 📄 FullTimeTable.dart (최종 수정 전체 코드 - 현재 시간표 이름 동적 반영)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +14,6 @@ class FullTimeTable extends StatefulWidget {
 }
 
 class _FullTimeTableState extends State<FullTimeTable> {
-  // ❌ isDeleteMode 변수 제거
   late var timetable = <String, tp.SubjectInfo?>{};
 
   // ⭐️ 핵심 추가: Provider 인스턴스를 저장할 변수
@@ -96,8 +95,13 @@ class _FullTimeTableState extends State<FullTimeTable> {
 
   @override
   Widget build(BuildContext context) {
-    // 🚨 context.watch 대신 리스너를 사용하므로 이 부분은 삭제합니다.
-    // context.watch<tp.TimetableProvider>();
+    // 🚨 [수정]: context.watch를 사용하여 Provider 상태 변경 감지
+    // Provider의 상태 변경(특히 시간표 이름) 시 UI를 갱신합니다.
+    final timetableProvider = context.watch<tp.TimetableProvider>();
+
+    // 🚨 [추가]: 현재 활성화된 시간표 이름 가져오기
+    final String currentTimetableName =
+        timetableProvider.currentTimetable?.name ?? "시간표 로딩 중 / 선택 필요";
 
     final days = ['월', '화', '수', '목', '금'];
     final times = [
@@ -187,44 +191,16 @@ class _FullTimeTableState extends State<FullTimeTable> {
                                       mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                       children: [
-                                        const Text(
-                                          "2024년 1학기 시간표",
-                                          style: TextStyle(
+                                        // 🚨 [수정]: 시간표 이름을 동적으로 표시
+                                        Text(
+                                          currentTimetableName,
+                                          style: const TextStyle(
                                             fontSize: 19.89,
                                             fontWeight: FontWeight.bold,
                                             color: Color(0xFF1F2937),
                                           ),
                                         ),
                                         // ❌ 삭제: '삭제' 버튼 (GestureDetector) 제거
-                                        /*
-                                        GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              isDeleteMode = !isDeleteMode;
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              color: isDeleteMode
-                                                  ? Colors.red.shade100
-                                                  : const Color(0xFFF3F4F6),
-                                              borderRadius:
-                                              BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              isDeleteMode ? "삭제 중" : "삭제",
-                                              style: TextStyle(
-                                                color: isDeleteMode
-                                                    ? Colors.red.shade700
-                                                    : const Color(0xFF4B5563),
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        */
                                       ],
                                     ),
                                   ),
@@ -343,7 +319,6 @@ class _SlotButton extends StatelessWidget {
   final String id;
   final tp.SubjectInfo? data;
   final void Function(String, tp.SubjectInfo?) onChange;
-  // ❌ final bool isDeleteMode; 제거
   final VoidCallback? onSubjectTap;
   final VoidCallback? onRefreshAll;
 
@@ -351,7 +326,6 @@ class _SlotButton extends StatelessWidget {
     required this.id,
     required this.data,
     required this.onChange,
-    // ❌ required this.isDeleteMode, 제거
     this.onSubjectTap,
     this.onRefreshAll,
   });
@@ -378,9 +352,8 @@ class _SlotButton extends StatelessWidget {
       );
     }
 
-    // 과목이 있는 슬롯: 탭 시 무조건 onSubjectTap 실행 (삭제 모드 로직 제거)
+    // 과목이 있는 슬롯: 탭 시 무조건 onSubjectTap 실행
     return GestureDetector(
-      // 🚨 핵심 수정: isDeleteMode 조건부 제거, 무조건 onSubjectTap으로 연결
       onTap: onSubjectTap,
       child: Stack(
         children: [
@@ -418,21 +391,6 @@ class _SlotButton extends StatelessWidget {
             ),
           ),
           // ❌ 삭제 모드일 때 표시되던 '삭제' 텍스트 제거
-          /*
-          if (isDeleteMode)
-            const Positioned(
-              right: 8,
-              top: 6,
-              child: Text(
-                "삭제",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          */
         ],
       ),
     );

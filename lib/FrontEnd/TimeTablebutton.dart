@@ -1,4 +1,4 @@
-// 📄 TimeTablebutton.dart (최종 수정 완료 버전: 모든 구문 오류 및 경고 해결)
+// 📄 TimeTablebutton.dart (사용자 요청 사항 및 모든 수정 사항 반영된 전체 코드)
 // ===================================================================
 
 import 'package:flutter/material.dart';
@@ -13,7 +13,7 @@ import 'dart:convert'; // JSON 인코딩/디코딩
 // 💡 추가: Provider 임포트
 import 'package:provider/provider.dart';
 import '../Providers/TimetableProvider.dart'
-    as tp; // ScheduleProvider가 이 파일 안에 정의되어 있습니다.
+as tp; // ScheduleProvider가 이 파일 안에 정의되어 있습니다.
 
 class TimeTableButton extends StatefulWidget {
   final String subjectName;
@@ -80,8 +80,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     for (var lecture in lectures) {
       // files 리스트를 Map<String, dynamic> 타입으로 안전하게 변환
       final files = (lecture['files'] as List?)
-              ?.map((item) => Map<String, dynamic>.from(item))
-              .toList() ??
+          ?.map((item) => Map<String, dynamic>.from(item))
+          .toList() ??
           [];
 
       // 파일 리스트를 순회하며 해당 filePath를 가진 파일을 찾음
@@ -110,10 +110,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     // 1. 모든 강의 항목에서 파일 목록을 추출
     final List<Map<String, dynamic>> allFiles = lectures
         .expand((lecture) =>
-            (lecture['files'] as List?)
-                ?.map((item) => Map<String, dynamic>.from(item))
-                .toList() ??
-            <Map<String, dynamic>>[])
+    (lecture['files'] as List?)
+        ?.map((item) => Map<String, dynamic>.from(item))
+        .toList() ??
+        <Map<String, dynamic>>[])
         .toList();
 
     if (allFiles.isEmpty) return;
@@ -160,7 +160,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     if (itemData.containsKey('dueDate')) {
       // 1. 과제: 기존 목록에서 해당 항목의 인덱스를 찾음
       final index = assignments.indexWhere((a) =>
-          a['title'] == itemData['title'] &&
+      a['title'] == itemData['title'] &&
           a['dueDate'] == itemData['dueDate']);
 
       if (index != -1) {
@@ -173,7 +173,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     } else if (itemData.containsKey('examDate')) {
       // 2. 시험: 기존 목록에서 해당 항목의 인덱스를 찾음
       final index = exams.indexWhere((e) =>
-          e['examName'] == itemData['examName'] &&
+      e['examName'] == itemData['examName'] &&
           e['examDate'] == itemData['examDate']);
 
       if (index != -1) {
@@ -265,7 +265,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
       final int aSubmittedValue = aSubmitted ? 1 : 0;
       final int bSubmittedValue = bSubmitted ? 1 : 0;
       final int submittedComparison =
-          aSubmittedValue.compareTo(bSubmittedValue);
+      aSubmittedValue.compareTo(bSubmittedValue);
 
       if (submittedComparison != 0) {
         return submittedComparison;
@@ -279,9 +279,9 @@ class _TimeTableButtonState extends State<TimeTableButton> {
         try {
           // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
           final DateTime aDate =
-              DateTime.parse(aDueDateStr.replaceAll(' ', 'T'));
+          DateTime.parse(aDueDateStr.replaceAll(' ', 'T'));
           final DateTime bDate =
-              DateTime.parse(bDueDateStr.replaceAll(' ', 'T'));
+          DateTime.parse(bDueDateStr.replaceAll(' ', 'T'));
           return aDate.compareTo(bDate); // 빠른 날짜가 더 작음
         } catch (_) {
           // 날짜 파싱 오류 시 문자열로 비교
@@ -354,7 +354,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   void _openLectureAddPage({int? index}) async {
     // ✅ async 유지
     final Map<String, dynamic>? initialData =
-        index != null ? lectures[index] : null;
+    index != null ? lectures[index] : null;
 
     final newLectureData = await Navigator.push(
         context,
@@ -384,7 +384,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   void _openAssignmentAddPage({int? index}) async {
     // ✅ async 유지
     final Map<String, dynamic>? initialData =
-        index != null ? assignments[index] : null;
+    index != null ? assignments[index] : null;
 
     final newAssignmentData = await Navigator.push(
         context,
@@ -413,6 +413,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
       // 💡 [Fix: use_build_context_synchronously] mounted 체크
       if (mounted) {
+        // ScheduleProvider는 TimetableProvider 파일에 별칭으로 임포트되어 있음
         await Provider.of<tp.ScheduleProvider>(context, listen: false)
             .loadAllSchedules();
       }
@@ -423,7 +424,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   void _openExamAddPage({int? index}) async {
     // ✅ async 유지
     final Map<String, dynamic>? initialData =
-        index != null ? exams[index] : null;
+    index != null ? exams[index] : null;
 
     final newExamData = await Navigator.push(
         context,
@@ -452,6 +453,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
       // 💡 [Fix: use_build_context_synchronously] mounted 체크
       if (mounted) {
+        // ScheduleProvider는 TimetableProvider 파일에 별칭으로 임포트되어 있음
         await Provider.of<tp.ScheduleProvider>(context, listen: false)
             .loadAllSchedules();
       }
@@ -486,6 +488,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // 💡 [Fix: use_build_context_synchronously] mounted 체크
     if (mounted) {
+      // ScheduleProvider는 TimetableProvider 파일에 별칭으로 임포트되어 있음
       await Provider.of<tp.ScheduleProvider>(context, listen: false)
           .loadAllSchedules();
     }
@@ -504,6 +507,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // 💡 [Fix: use_build_context_synchronously] mounted 체크
     if (mounted) {
+      // ScheduleProvider는 TimetableProvider 파일에 별칭으로 임포트되어 있음
       await Provider.of<tp.ScheduleProvider>(context, listen: false)
           .loadAllSchedules();
     }
@@ -519,7 +523,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
     try {
       // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
       final DateTime targetDateTime =
-          DateTime.parse(dateString.replaceAll(' ', 'T'));
+      DateTime.parse(dateString.replaceAll(' ', 'T'));
       final DateTime now = DateTime.now();
 
       // 시험 (checkPassed: true)인 경우, 이미 지난 일시는 계산하지 않음
@@ -555,6 +559,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 [추가] TimetableProvider 접근
+    final timetableProvider = Provider.of<tp.TimetableProvider>(context);
+    // 💡 [수정] 현재 시간표 이름 가져오기. 없으면 '시간표 선택'으로 표시
+    final currentTimetableName =
+        timetableProvider.currentTimetable?.name ?? '시간표 선택';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
@@ -575,9 +585,10 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    "2024년 1학기",
-                    style: TextStyle(
+                  // ✨ [사용자 요청 사항 반영] 하드코딩된 '2024년 1학기'를 Provider의 이름으로 대체
+                  Text(
+                    currentTimetableName,
+                    style: const TextStyle(
                       fontSize: 22,
                       color: Color(0xFF6A7282),
                     ),
@@ -602,12 +613,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                         .asMap()
                         .entries
                         .map((e) => _buildLectureItem(
-                              e.value,
-                              Colors.blue, // MaterialColor
-                              onDelete: () => _deleteLecture(e.key),
-                              // 💡 항목 전체 탭 시 수정 페이지로 이동
-                              onTap: () => _openLectureAddPage(index: e.key),
-                            ))
+                      e.value,
+                      Colors.blue, // MaterialColor
+                      onDelete: () => _deleteLecture(e.key),
+                      // 💡 항목 전체 탭 시 수정 페이지로 이동
+                      onTap: () => _openLectureAddPage(index: e.key),
+                    ))
                         .toList(),
                   ),
                   const SizedBox(height: 20),
@@ -617,7 +628,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                     title: "과제",
                     expanded: assignmentExpanded,
                     onToggle: () => setState(
-                        () => assignmentExpanded = !assignmentExpanded),
+                            () => assignmentExpanded = !assignmentExpanded),
                     onAdd: () =>
                         _openAssignmentAddPage(), // 💡 추가 기능 (index: null)
                     gradient: const LinearGradient(
@@ -630,30 +641,30 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                         .asMap()
                         .entries
                         .map((e) => _buildAssignmentItem(
-                              e.value,
-                              Colors.green, // MaterialColor
-                              onToggleSubmitted: () async {
-                                setState(() {
-                                  // 제출 상태를 토글
-                                  e.value['submitted'] =
-                                      !(e.value['submitted'] ?? false);
-                                  // 토글 후 정렬
-                                  _sortData();
-                                });
-                                // 💡 수정: 데이터 저장 및 Provider 업데이트
-                                await _saveData();
-                                // 💡 [Fix: use_build_context_synchronously] mounted 체크
-                                if (mounted) {
-                                  await Provider.of<tp.ScheduleProvider>(
-                                          context,
-                                          listen: false)
-                                      .loadAllSchedules();
-                                }
-                              },
-                              onDelete: () => _deleteAssignment(e.key),
-                              // 💡 항목 전체 탭 시 수정 페이지로 이동
-                              onTap: () => _openAssignmentAddPage(index: e.key),
-                            ))
+                      e.value,
+                      Colors.green, // MaterialColor
+                      onToggleSubmitted: () async {
+                        setState(() {
+                          // 제출 상태를 토글
+                          e.value['submitted'] =
+                          !(e.value['submitted'] ?? false);
+                          // 토글 후 정렬
+                          _sortData();
+                        });
+                        // 💡 수정: 데이터 저장 및 Provider 업데이트
+                        await _saveData();
+                        // 💡 [Fix: use_build_context_synchronously] mounted 체크
+                        if (mounted) {
+                          await Provider.of<tp.ScheduleProvider>(
+                              context,
+                              listen: false)
+                              .loadAllSchedules();
+                        }
+                      },
+                      onDelete: () => _deleteAssignment(e.key),
+                      // 💡 항목 전체 탭 시 수정 페이지로 이동
+                      onTap: () => _openAssignmentAddPage(index: e.key),
+                    ))
                         .toList(),
                   ),
                   const SizedBox(height: 20),
@@ -675,12 +686,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                         .asMap()
                         .entries
                         .map((e) => _buildExamItem(
-                              e.value,
-                              Colors.red, // MaterialColor
-                              onDelete: () => _deleteExam(e.key),
-                              // 💡 항목 전체 탭 시 수정 페이지로 이동
-                              onTap: () => _openExamAddPage(index: e.key),
-                            ))
+                      e.value,
+                      Colors.red, // MaterialColor
+                      onDelete: () => _deleteExam(e.key),
+                      // 💡 항목 전체 탭 시 수정 페이지로 이동
+                      onTap: () => _openExamAddPage(index: e.key),
+                    ))
                         .toList(),
                   ),
 
@@ -792,7 +803,7 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child:
-                            Icon(Icons.add, color: accent.shade800), // 💡 오류 해결
+                        Icon(Icons.add, color: accent.shade800), // 💡 오류 해결
                       ),
                     ),
                     InkWell(
@@ -843,8 +854,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // -------------------------------------------------------------------
   Widget _buildLectureItem(Map<String, dynamic> data,
       MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
-      {required VoidCallback onDelete,
-      required VoidCallback onTap}) {
+          {required VoidCallback onDelete,
+        required VoidCallback onTap}) {
     final String title = data['title'] ?? '제목 없음';
     // 💡 [수정] 사용되지 않는 'professor' 변수 선언 제거
     final String date = data['date'] ?? ''; // 'YYYY-MM-DD' 형식의 문자열
@@ -852,8 +863,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // List<Map<String, dynamic>>으로 타입 캐스팅 (lastOpened 필드 처리를 위해)
     final List<Map<String, dynamic>> files = (data['files'] as List?)
-            ?.map((item) => Map<String, dynamic>.from(item))
-            .toList() ??
+        ?.map((item) => Map<String, dynamic>.from(item))
+        .toList() ??
         [];
     final bool hasFiles = files.isNotEmpty;
 
@@ -986,26 +997,26 @@ class _TimeTableButtonState extends State<TimeTableButton> {
   // 📝 과제 아이템 (Assignment Item) - MaterialColor로 타입 수정
   // -------------------------------------------------------------------
   Widget _buildAssignmentItem(
-    Map<String, dynamic> data,
-    MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
-    {
-    required VoidCallback onToggleSubmitted,
-    required VoidCallback onDelete,
-    required VoidCallback onTap,
-  }) {
+      Map<String, dynamic> data,
+      MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
+          {
+        required VoidCallback onToggleSubmitted,
+        required VoidCallback onDelete,
+        required VoidCallback onTap,
+      }) {
     final String title = data['title'] ?? '제목 없음';
     // 💡 'submitted' 키가 있을 경우에만 과제로 간주하여 상태를 추출합니다.
     final bool isAssignment = data.containsKey('submitted');
     final bool submitted =
-        isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
+    isAssignment ? (data['submitted'] ?? false) : false; // 과제일 때만 상태 추출
     // 💡 수정: dueDate를 포맷팅된 문자열로 변경
     final String dateString = isAssignment ? (data['dueDate'] ?? '') : '';
     String displayDueDate = '';
     // 💡 D-Day 계산 (미제출일 경우만 D-Day 표시)
     final String dDayString =
-        isAssignment && dateString.isNotEmpty && !submitted
-            ? _getDDayString(dateString)
-            : '';
+    isAssignment && dateString.isNotEmpty && !submitted
+        ? _getDDayString(dateString)
+        : '';
     if (dateString.isNotEmpty) {
       try {
         // 'YYYY-MM-DD HH:mm' 형식의 문자열을 파싱하기 위해 ' '를 'T'로 대체
@@ -1025,8 +1036,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // List<Map<String, dynamic>>으로 타입 캐스팅 (lastOpened 필드 처리를 위해)
     final List<Map<String, dynamic>> files = (data['files'] as List?)
-            ?.map((item) => Map<String, dynamic>.from(item))
-            .toList() ??
+        ?.map((item) => Map<String, dynamic>.from(item))
+        .toList() ??
         [];
     final bool hasFiles = files.isNotEmpty;
 
@@ -1115,8 +1126,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
                               color: dDayString == 'D-Day'
                                   ? Colors.red.shade600
                                   : (dDayString.startsWith('D+')
-                                      ? Colors.orange.shade600
-                                      : color.shade600), // 💡 오류 해결
+                                  ? Colors.orange.shade600
+                                  : color.shade600), // 💡 오류 해결
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -1182,12 +1193,12 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
   // 💥 시험 아이템 (Exam Item) - MaterialColor로 타입 수정
   Widget _buildExamItem(
-    Map<String, dynamic> data,
-    MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
-    {
-    required VoidCallback onDelete,
-    required VoidCallback onTap,
-  }) {
+      Map<String, dynamic> data,
+      MaterialColor color, // 💡 [수정] MaterialColor로 타입 변경
+          {
+        required VoidCallback onDelete,
+        required VoidCallback onTap,
+      }) {
     final String title = data['examName'] ?? '제목 없음';
     final String location = data['examLocation'] ?? '';
     final String date = data['examDate'] ?? ''; // 'YYYY-MM-DD HH:mm' 형식의 문자열
@@ -1232,8 +1243,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
 
     // List<Map<String, dynamic>>으로 타입 캐스팅 (lastOpened 필드 처리를 위해)
     final List<Map<String, dynamic>> files = (data['materials'] as List?)
-            ?.map((item) => Map<String, dynamic>.from(item))
-            .toList() ??
+        ?.map((item) => Map<String, dynamic>.from(item))
+        .toList() ??
         [];
     final bool hasFiles = files.isNotEmpty;
 
@@ -1398,9 +1409,8 @@ class _TimeTableButtonState extends State<TimeTableButton> {
         ],
       ),
     );
-  } // <--- [Fix: expected_token] 함수 종료 후 불필요한 세미콜론(;) 제거됨
+  }
 }
-// <--- [Fix: expected_token] 클래스 종료 후 불필요한 세미콜론(;) 제거됨
 
 // ===================================================================
 // 📎 파일 목록 모달 (FileListModal) - MaterialColor로 타입 수정
@@ -1496,7 +1506,7 @@ class FileListModal extends StatelessWidget {
                   title: Text(file["name"] ?? '이름 없음'),
                   subtitle: Text("업로드: ${file["date"]}"),
                   trailing:
-                      Icon(Icons.launch, color: color.shade500), // 💡 오류 해결
+                  Icon(Icons.launch, color: color.shade500), // 💡 오류 해결
                   onTap: () => _openFile(context, file),
                 );
               },
